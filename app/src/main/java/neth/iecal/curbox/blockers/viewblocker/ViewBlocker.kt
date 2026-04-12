@@ -73,7 +73,7 @@ class ViewBlocker : BaseBlocker() {
             // ── YouTube ──
             ViewBlockerRule("yt_video_thingies", "com.google.android.youtube", "Hide everything (recommendations, comments, description etc) except the video",
                 viewId = "com.google.android.youtube:id/watch_list"),
-            ViewBlockerRule("yt_video_everything_excpt_results", "com.google.android.youtube", "Hide feed and only let me access search results",
+            ViewBlockerRule("yt_video_everything_except_results", "com.google.android.youtube", "Hide feed and only let me access search results",
                 viewId = "com.google.android.youtube:id/results",
                 requirePresent = listOf("descres:accessibility_feed_filter_bar_content_description")),
 
