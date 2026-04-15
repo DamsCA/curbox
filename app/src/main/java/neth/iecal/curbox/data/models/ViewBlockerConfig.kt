@@ -4,22 +4,14 @@ import android.graphics.Color
 
 /**
  * UI and persistence model for a single built-in view-blocking rule.
- *
- * This is the model that is stored in DataStore and shown in the UI. It carries a stable
- * [id], a human-readable [label], and an [isEnabled] toggle.
- *
- * At runtime, enabled rules are converted directly to
- * [neth.iecal.curbox.blockers.viewblocker.ViewBlockerFilterRule] objects via the
- * `ViewBlockerRule.toFilterRule()` extension defined in ViewBlockerRuleParser.kt.
- *
- * Fields that accept NodeMatcher syntax strings (e.g. [requirePresent], [requireAbsent])
- * use the format `"type:value;type2:value2"` — see NodeMatcher.parse() in ViewBlockerFilterRule.kt.
- * Multiple matchers in [requirePresent]/[requireAbsent] are pipe-separated: `"m1|m2"`.
+ * Converted to [neth.iecal.curbox.blockers.viewblocker.ViewBlockerFilterRule] at runtime
+ * via `ViewBlockerRule.toFilterRule()`.
+ * NodeMatcher syntax for [requirePresent]/[requireAbsent]: `"type:value;type2:value2"`,
+ * pipe-separated for multiple matchers: `"m1|m2"`.
  */
 data class ViewBlockerRule(
     val id: String,
     val packageName: String,
-    /** Human-readable description shown in the UI toggle list. */
     val label: String,
     val viewId: String? = null,
     /** Pipe-separated content descriptions, e.g. `"Like|Me gusta"`. */
@@ -40,7 +32,6 @@ data class ViewBlockerRule(
     val descContains: String? = null,
     val textRegex: String? = null,
     val descRegex: String? = null,
-    /** A single NodeMatcher string to match children of the target node. */
     val matchChildren: String? = null,
     /** NodeMatcher string identifying the layout to cover entirely. */
     val blockLayout: String? = null,

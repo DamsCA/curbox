@@ -37,7 +37,6 @@ class ViewBlocker : BaseBlocker() {
         private const val MAX_OVERLAY_COUNT = 100
         private const val BACK_COOLDOWN_MS = 600L
 
-        // Accessibility event types that can indicate a screen change requiring a blocking pass.
         private const val TARGET_EVENTS_MASK =
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
             AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED or
@@ -45,15 +44,9 @@ class ViewBlocker : BaseBlocker() {
             AccessibilityEvent.TYPE_VIEW_SELECTED
 
         /**
-         * Built-in rules that are shipped with the app and shown as toggles in the UI.
-         * Each rule is stored as a [ViewBlockerRule] so it can carry an ID, a human-readable
-         * label, and an [ViewBlockerRule.isEnabled] flag that persists in DataStore.
-         *
-         * At runtime they are converted directly to [ViewBlockerFilterRule] objects via
-         * [ViewBlockerRule.toFilterRule] — no intermediate string serialization needed.
-         *
-         * [requirePresent] / [requireAbsent] values use [NodeMatcher] syntax:
-         *   `"type:value;type2:value2"` — see [NodeMatcher.parse].
+         * Built-in rules shipped with the app and shown as toggles in the UI.
+         * Converted to [ViewBlockerFilterRule] at runtime via [ViewBlockerRule.toFilterRule].
+         * [requirePresent] / [requireAbsent] use [NodeMatcher] syntax: `"type:value;type2:value2"`.
          */
         val DEFAULT_RULES = listOf(
             // ── Instagram ──
@@ -167,7 +160,6 @@ class ViewBlocker : BaseBlocker() {
             .filter { it.isEnabled }
             .map { it.toFilterRule() }
 
-        // Parse user-added custom rule strings (legacy ##-delimited or token-based formats).
         val customFilterRules = ViewBlockerRuleParser.parseRules(config.customRules)
 
         val allRules = (builtInFilterRules + customFilterRules).map { it.copy(enabled = true) }

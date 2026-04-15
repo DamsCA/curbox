@@ -2,20 +2,14 @@ package neth.iecal.curbox.blockers.viewblocker
 
 import android.graphics.Color
 
-// Represents one step in a hierarchical view path (e.g. "FrameLayout[0]").
-// isWildcard=true means match all children of the given class (index "[*]").
 data class PathSegment(
     val className: String,
     val index: Int,
     val isWildcard: Boolean
 )
 
-// The action to perform when a rule matches.
-// OVERLAY  – draw a colored rectangle over the matched view (default).
-// BACK     – fire a system back-press instead of drawing an overlay.
 enum class RuleAction { OVERLAY, BACK }
 
-// All possible criteria types that a NodeMatcher can use to identify a node.
 enum class MatchType {
     VIEW_ID, DESC, TEXT, CLASS_NAME, PATH,
     TEXT_CONTAINS, DESC_CONTAINS, DESC_RES,
@@ -67,7 +61,6 @@ data class NodeMatcher(
             return NodeMatcher(parsedCriteria)
         }
 
-        /** Parse a pipe-separated list of matchers: `"matcher1|matcher2|…"`. */
         fun parseList(raw: String): List<NodeMatcher> =
             raw.split("|").mapNotNull { parse(it.trim()) }
     }
@@ -238,7 +231,6 @@ data class ViewBlockerFilterRule(
             )
         }
 
-        /** Parse `"true"/"1"/"yes"` → true, `"false"/"0"/"no"` → false, else [default]. */
         private fun parseBooleanToken(value: String?, default: Boolean): Boolean {
             return when (value?.lowercase()) {
                 "true", "1", "yes" -> true

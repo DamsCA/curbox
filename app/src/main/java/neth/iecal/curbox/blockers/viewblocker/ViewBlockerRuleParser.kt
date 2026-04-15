@@ -29,7 +29,6 @@ object ViewBlockerRuleParser {
             if (line.isBlank()) continue
             val trimmed = line.trim()
 
-            // Disabled rules are completely ignored at parse time.
             if (trimmed.startsWith("!DISABLED!")) {
                 pendingDescription = null
                 continue
