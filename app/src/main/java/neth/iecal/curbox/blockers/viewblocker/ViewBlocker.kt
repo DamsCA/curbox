@@ -422,8 +422,11 @@ class ViewBlocker : BaseBlocker() {
                 matched
             }
             rule.needsViewIdLookup || rule.needsViewIdWithDescLookup -> {
-                root.findAccessibilityNodeInfosByViewId(rule.targetViewId!!)
-                    ?.any { it.isVisibleToUser } == true
+                val nodes = root.findAccessibilityNodeInfosByViewId(rule.targetViewId!!)
+                    ?: return false
+                val matched = nodes.any { it.isVisibleToUser }
+                nodes.forEach { @Suppress("DEPRECATION") it.recycle() }
+                matched
             }
             rule.isRecursiveRule -> findNodeRecursive(root) { isTargetView(it, rule) }
             else -> false
