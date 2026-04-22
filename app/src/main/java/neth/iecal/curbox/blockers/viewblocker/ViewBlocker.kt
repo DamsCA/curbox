@@ -405,6 +405,31 @@ class ViewBlocker : BaseBlocker() {
         return true
     }
 
+    /**
+     * Returns true if [rule] has at least one visible match in [root].
+     * Used by [neth.iecal.curbox.trackers.ViewTracker] to count view encounters
+     * without triggering any overlay.
+     */
+    fun hasRuleMatch(root: AccessibilityNodeInfo, rule: ViewBlockerFilterRule): Boolean {
+        if (!passesRequireAbsent(root, rule)) return false
+        if (!passesRequirePresent(root, rule)) return false
+        return when {
+            rule.parsedPath != null -> {
+                val nodes = matchPathsParsed(root, rule.parsedPath)
+                val matched = nodes.any { it.isVisibleToUser }
+                // recycle path-matched nodes
+                nodes.forEach { if (it != root) @Suppress("DEPRECATION") it.recycle() }
+                matched
+            }
+            rule.needsViewIdLookup || rule.needsViewIdWithDescLookup -> {
+                root.findAccessibilityNodeInfosByViewId(rule.targetViewId!!)
+                    ?.any { it.isVisibleToUser } == true
+            }
+            rule.isRecursiveRule -> findNodeRecursive(root) { isTargetView(it, rule) }
+            else -> false
+        }
+    }
+
     private fun doesNodeMatch(node: AccessibilityNodeInfo, matcher: NodeMatcher, packageName: String): Boolean {
         return matcher.criteria.all { (type, value) ->
             when (type) {

@@ -191,6 +191,50 @@
             android:text="@string/add_a_reducer"
             app:icon="@drawable/baseline_add_24" />
 
+        <!-- View Tracker Section -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="12dp"
+            android:letterSpacing="0.1"
+            android:text="@string/view_tracker_title"
+            android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+            android:textColor="?attr/colorOnSurfaceVariant" />
+
+        <com.google.android.material.card.MaterialCardView
+            app:cardBackgroundColor="?attr/colorSurfaceContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:alpha="0.7"
+                    android:text="@string/view_tracker_subtitle"
+                    android:textAppearance="@style/TextAppearance.Material3.BodySmall" />
+
+                <!-- Stats cards inserted here dynamically -->
+                <LinearLayout
+                    android:id="@+id/view_tracker_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
         <Space
             android:layout_width="1dp"
             android:layout_height="300dp"/>

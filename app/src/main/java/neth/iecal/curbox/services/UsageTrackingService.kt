@@ -10,6 +10,7 @@ import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.widget.Toast
 import neth.iecal.curbox.trackers.ReelsCountTracker
+import neth.iecal.curbox.trackers.ViewTracker
 import neth.iecal.curbox.ui.overlay.ReelsOverlayManager
 import androidx.core.net.toUri
 import neth.iecal.curbox.anti_stimulants.MindfulMessageTracker
@@ -21,6 +22,7 @@ class UsageTrackingService : BaseBlockingService() {
     private val reelsCountTracker = ReelsCountTracker()
     private val mindfulMessageTracker = MindfulMessageTracker()
     private val websiteUsageTracker = neth.iecal.curbox.trackers.WebsiteUsageTracker()
+    private val viewTracker = ViewTracker()
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         super.onAccessibilityEvent(event)
@@ -28,6 +30,7 @@ class UsageTrackingService : BaseBlockingService() {
             reelsCountTracker.onEvent(event)
             mindfulMessageTracker.onEvent(event)
             websiteUsageTracker.onEvent(event)
+            viewTracker.onEvent(event)
         } catch (error: Exception) {
             Log.e("Usage Tracking error", error.toString())
         }
@@ -37,13 +40,15 @@ class UsageTrackingService : BaseBlockingService() {
     override fun onServiceConnected() {
         serviceInfo = AccessibilityServiceInfo().apply {
             eventTypes =
-                AccessibilityEvent.TYPE_VIEW_SCROLLED or AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
+                AccessibilityEvent.TYPE_VIEW_SCROLLED or AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED or
+                AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
             feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
             flags = AccessibilityServiceInfo.DEFAULT
         }
         reelsCountTracker.setup(this, reelsOverlayManager)
         mindfulMessageTracker.setup(this)
         websiteUsageTracker.setup(this)
+        viewTracker.setup(this)
 
         reelsCountTracker.setupReceivers()
 
@@ -75,6 +80,7 @@ class UsageTrackingService : BaseBlockingService() {
         mindfulMessageTracker.onDestroy()
         reelsCountTracker.onDestroy()
         websiteUsageTracker.onDestroy()
+        viewTracker.onDestroy()
     }
 
 }

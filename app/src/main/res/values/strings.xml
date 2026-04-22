@@ -273,4 +273,17 @@
     <string name="picker_notification_text">Tap to start picking an element</string>
     <string name="picker_active_title">Element Picker Active</string>
     <string name="picker_active_text">Tap elements on screen to select them</string>
+
+    <!-- View Tracker -->
+    <string name="view_tracker_title">View Stats</string>
+    <string name="view_tracker_subtitle">Times specific views were seen today (long-press to manage custom rules)</string>
+    <string name="view_tracker_no_data">No views tracked yet today</string>
+    <string name="view_tracker_add_rule">Track Custom View</string>
+    <string name="view_tracker_add_rule_hint">Enter a ViewBlocker-format rule. The pkg: token is pre-filled. Add an id:, path: or other selector and an optional comment: label.</string>
+    <string name="view_tracker_rule_added">Tracking rule added</string>
+    <string name="view_tracker_custom_rules">Custom Tracking Rules</string>
+    <string name="view_tracker_delete_rule">Delete this tracking rule?</string>
+    <string name="view_tracker_no_custom_rules">No custom tracking rules for this app</string>
+    <string name="grayscale">Grayscale</string>
+    <string name="delete">Delete</string>
 </resources>

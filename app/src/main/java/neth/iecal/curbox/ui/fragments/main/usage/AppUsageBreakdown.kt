@@ -5,8 +5,11 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -18,12 +21,14 @@ import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
 import com.github.mikephil.charting.formatter.ValueFormatter
+import com.google.android.material.card.MaterialCardView
 import com.google.android.material.color.MaterialColors
-import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.switchmaterial.SwitchMaterial
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import neth.iecal.curbox.R
+import neth.iecal.curbox.data.db.ViewTrackerStatsEntity
 import neth.iecal.curbox.databinding.FragmentAppUsageBreakdownBinding
 import neth.iecal.curbox.ui.activity.FragmentActivity
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.appBlocker.CreateAppGroupFragment
@@ -34,7 +39,8 @@ import neth.iecal.curbox.utils.TimeTools
 class AppUsageBreakdown(private val stat: AllAppsUsageFragment.Stat) : Fragment() {
 
     private lateinit var binding: FragmentAppUsageBreakdownBinding
-    private val viewModel: SetupShortcutViewModel by viewModels()
+    private val shortcutViewModel: SetupShortcutViewModel by viewModels()
+    private val breakdownViewModel: AppUsageBreakdownViewModel by viewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -59,8 +65,17 @@ class AppUsageBreakdown(private val stat: AllAppsUsageFragment.Stat) : Fragment(
         binding.screentime.text = TimeTools.formatTime(stat.totalTime, false)
         binding.sessions.text = stat.startTimes.size.toString()
 
+        // Tell the breakdown ViewModel which app we are showing.
+        breakdownViewModel.setPackageName(stat.packageName)
+
+        observeShortcuts()
+        observeViewTrackerStats()
+        setupAddTrackingRuleButton()
+    }
+
+    private fun observeShortcuts() {
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.settings.collectLatest { settings ->
+            shortcutViewModel.settings.collectLatest { settings ->
                 if (settings == null) return@collectLatest
                 binding.dynamicShortcutsContainer.removeAllViews()
 
@@ -71,7 +86,7 @@ class AppUsageBreakdown(private val stat: AllAppsUsageFragment.Stat) : Fragment(
                         subtitle = "App Blocker",
                         isActive = group.isActive,
                         iconRes = R.drawable.ic_app_blocker_aesthetic,
-                        onToggle = { active -> viewModel.toggleAppGroup(group.id, active) },
+                        onToggle = { active -> shortcutViewModel.toggleAppGroup(group.id, active) },
                         onClick = {
                             startActivity(Intent(requireContext(), FragmentActivity::class.java).apply {
                                 putExtra("fragment", CreateAppGroupFragment.FRAGMENT_ID)
@@ -88,7 +103,7 @@ class AppUsageBreakdown(private val stat: AllAppsUsageFragment.Stat) : Fragment(
                         subtitle = "Grayscale",
                         isActive = group.isActive,
                         iconRes = R.drawable.ic_grayscale_aesthetic,
-                        onToggle = { active -> viewModel.toggleGrayscaleGroup(group.groupId, active) },
+                        onToggle = { active -> shortcutViewModel.toggleGrayscaleGroup(group.groupId, active) },
                         onClick = {
                             startActivity(Intent(requireContext(), FragmentActivity::class.java).apply {
                                 putExtra("fragment", CreateGrayscaleGroupFragment.FRAGMENT_ID)
@@ -116,25 +131,172 @@ class AppUsageBreakdown(private val stat: AllAppsUsageFragment.Stat) : Fragment(
                 }
             }
         }
+    }
 
-        binding.btnCreateNewRule.setOnClickListener {
-            val options = arrayOf("App Blocker", "Grayscale", "Auto Focus")
-            MaterialAlertDialogBuilder(requireContext())
-                .setTitle("Create New Rule")
-                .setItems(options) { _, which ->
-                    val fragmentId = when (which) {
-                        0 -> CreateAppGroupFragment.FRAGMENT_ID
-                        1 -> CreateGrayscaleGroupFragment.FRAGMENT_ID
-                        2 -> CreateAutoFocusGroupFragment.FRAGMENT_ID
-                        else -> return@setItems
+    private fun observeViewTrackerStats() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            breakdownViewModel.viewTrackerStats.collectLatest { stats ->
+                buildTrackerStatsCards(stats)
+            }
+        }
+    }
+
+    /** Build/rebuild the view-tracker stats cards from [stats]. */
+    private fun buildTrackerStatsCards(stats: List<ViewTrackerStatsEntity>) {
+        val container = binding.viewTrackerContainer
+        container.removeAllViews()
+
+        if (stats.isEmpty()) {
+            // Show a placeholder so the section is still visible even with no data yet.
+            val placeholder = TextView(requireContext()).apply {
+                text = getString(R.string.view_tracker_no_data)
+                setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodyMedium)
+                val typedValue = android.util.TypedValue()
+                context.theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, typedValue, true)
+                setTextColor(typedValue.data)
+                alpha = 0.7f
+            }
+            container.addView(placeholder)
+            return
+        }
+
+        for (stat in stats) {
+            val card = MaterialCardView(requireContext()).apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { bottomMargin = (8 * resources.displayMetrics.density).toInt() }
+
+                val typedValue = android.util.TypedValue()
+                context.theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceContainerHigh, typedValue, true)
+                setCardBackgroundColor(typedValue.data)
+                radius = 16 * resources.displayMetrics.density
+                cardElevation = 0f
+                strokeWidth = 0
+
+                val row = LinearLayout(requireContext()).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = android.view.Gravity.CENTER_VERTICAL
+                    val p = (16 * resources.displayMetrics.density).toInt()
+                    setPadding(p, p, p, p)
+                }
+
+                val labelView = TextView(requireContext()).apply {
+                    text = stat.label
+                    textSize = 14f
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                        marginEnd = (8 * resources.displayMetrics.density).toInt()
                     }
-                    startActivity(Intent(requireContext(), FragmentActivity::class.java).apply {
-                        putExtra("fragment", fragmentId)
-                        putExtra("prefill_package", stat.packageName)
-                    })
+                    val typedVal = android.util.TypedValue()
+                    context.theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurface, typedVal, true)
+                    setTextColor(typedVal.data)
+                }
+
+                val countView = TextView(requireContext()).apply {
+                    text = stat.count.toString()
+                    textSize = 14f
+                    val typedVal = android.util.TypedValue()
+                    context.theme.resolveAttribute(com.google.android.material.R.attr.colorPrimary, typedVal, true)
+                    setTextColor(typedVal.data)
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                }
+
+                row.addView(labelView)
+                row.addView(countView)
+                addView(row)
+            }
+            container.addView(card)
+        }
+    }
+
+    private fun setupAddTrackingRuleButton() {
+        binding.btnCreateNewRule.setOnClickListener {
+            val options = arrayOf(
+                getString(R.string.app_blocker),
+                getString(R.string.grayscale),
+                getString(R.string.auto_focus),
+                getString(R.string.view_tracker_add_rule)
+            )
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle(getString(R.string.add_a_reducer))
+                .setItems(options) { _, which ->
+                    when (which) {
+                        0 -> startActivity(Intent(requireContext(), FragmentActivity::class.java).apply {
+                            putExtra("fragment", CreateAppGroupFragment.FRAGMENT_ID)
+                            putExtra("prefill_package", stat.packageName)
+                        })
+                        1 -> startActivity(Intent(requireContext(), FragmentActivity::class.java).apply {
+                            putExtra("fragment", CreateGrayscaleGroupFragment.FRAGMENT_ID)
+                            putExtra("prefill_package", stat.packageName)
+                        })
+                        2 -> startActivity(Intent(requireContext(), FragmentActivity::class.java).apply {
+                            putExtra("fragment", CreateAutoFocusGroupFragment.FRAGMENT_ID)
+                            putExtra("prefill_package", stat.packageName)
+                        })
+                        3 -> showAddTrackingRuleDialog()
+                    }
                 }
                 .show()
         }
+
+        // Long-press on the view tracker stats container opens the custom rule management dialog.
+        binding.viewTrackerContainer.setOnLongClickListener {
+            showManageCustomTrackingRulesDialog()
+            true
+        }
+    }
+
+    /** Show a dialog to enter a new custom view tracking rule (ViewBlocker format). */
+    private fun showAddTrackingRuleDialog() {
+        val editText = EditText(requireContext()).apply {
+            hint = getString(R.string.custom_rule_hint)
+            // Pre-fill the pkg token so the user only needs to add the selector.
+            setText("pkg:${stat.packageName} ")
+            setSelection(text.length)
+        }
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(getString(R.string.view_tracker_add_rule))
+            .setMessage(getString(R.string.view_tracker_add_rule_hint))
+            .setView(editText)
+            .setPositiveButton(getString(R.string.add)) { _, _ ->
+                val rule = editText.text.toString().trim()
+                if (rule.isNotEmpty()) {
+                    breakdownViewModel.addCustomTrackingRule(rule)
+                    Toast.makeText(requireContext(), getString(R.string.view_tracker_rule_added), Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton(getString(android.R.string.cancel), null)
+            .show()
+    }
+
+    /** Show a dialog listing current custom tracking rules for this app with delete option. */
+    private fun showManageCustomTrackingRulesDialog() {
+        val config = breakdownViewModel.viewTrackerConfig.value
+        val appRules = config.customRules.filter { it.contains("pkg:${stat.packageName}") }
+        if (appRules.isEmpty()) {
+            Toast.makeText(requireContext(), getString(R.string.view_tracker_no_custom_rules), Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val labels = appRules.map { rule ->
+            val commentMatch = Regex("""comment:(?:"([^"]*)"|(\S+))""").find(rule)
+            commentMatch?.groupValues?.get(1)?.ifEmpty { commentMatch.groupValues[2] } ?: rule
+        }.toTypedArray()
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(getString(R.string.view_tracker_custom_rules))
+            .setItems(labels) { _, which ->
+                val selectedRule = appRules[which]
+                MaterialAlertDialogBuilder(requireContext())
+                    .setTitle(getString(R.string.view_tracker_delete_rule))
+                    .setMessage(labels[which])
+                    .setPositiveButton(getString(R.string.delete)) { _, _ ->
+                        breakdownViewModel.removeCustomTrackingRule(selectedRule)
+                    }
+                    .setNegativeButton(getString(android.R.string.cancel), null)
+                    .show()
+            }
+            .show()
     }
 
     private fun addShortcutCard(
@@ -263,3 +425,4 @@ class AppUsageBreakdown(private val stat: AllAppsUsageFragment.Stat) : Fragment(
         }
     }
 }
+
