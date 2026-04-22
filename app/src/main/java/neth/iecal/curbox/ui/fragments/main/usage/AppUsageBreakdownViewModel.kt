@@ -51,8 +51,8 @@ class AppUsageBreakdownViewModel(application: Application) : AndroidViewModel(ap
                     viewTrackerStatsDao.getStatsForAppFlow(TimeTools.getCurrentDate(), pkg)
                 }
             }.collectLatest { stats ->
-                // Filter out zero-count entries so the list stays clean.
-                _viewTrackerStats.value = stats.filter { it.count > 0 }
+                // Filter out zero-duration entries so the list stays clean.
+                _viewTrackerStats.value = stats.filter { it.durationMs > 0 }
             }
         }
     }

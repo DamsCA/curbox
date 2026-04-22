@@ -19,22 +19,21 @@ import neth.iecal.curbox.services.BaseBlockingService
 import neth.iecal.curbox.utils.TimeTools
 
 /**
- * Tracks how many times specific views are encountered per app, per day.
+ * Tracks how long specific views are visible per app, per day.
  *
  * By default, all pre-built ViewBlocker rules are tracked regardless of whether
  * the ViewBlocker feature is enabled or disabled.  Users can also add custom
  * tracking rules (same format as ViewBlocker custom rules) on a per-app basis.
  *
- * To avoid counting the same view multiple times in rapid bursts, each rule is
- * subject to a [RULE_COOLDOWN_MS] cooldown before it can be counted again.
+ * Duration is measured from the moment a view first appears to when it disappears.
+ * Accumulated durations are persisted to Room so the totals survive app restarts.
+ * In-progress sessions are flushed on a window-state change (meaning the user left
+ * the screen where the view was visible) and also on service destroy.
  */
 class ViewTracker {
 
     companion object {
         private const val TAG = "ViewTracker"
-
-        /** Minimum gap between two increments of the same rule in a single app session. */
-        private const val RULE_COOLDOWN_MS = 3_000L
 
         private val TARGET_EVENTS_MASK =
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
@@ -47,7 +46,7 @@ class ViewTracker {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    // ViewBlocker instance reused for its public matching helpers (findNodeByMatcher, hasRuleMatch).
+    // ViewBlocker instance reused for its public matching helpers.
     private val viewBlockerHelper = ViewBlocker()
 
     // rules grouped by packageName -> list of (filterRule, stableId, label)
@@ -58,8 +57,9 @@ class ViewTracker {
     )
     @Volatile private var rulesByPackage: Map<String, List<TrackingEntry>> = emptyMap()
 
-    // Cooldown map: ruleId -> last-counted uptimeMs
-    private val lastCounted = HashMap<String, Long>()
+    // Active visibility windows: ruleId -> (uptimeMs when visible started, packageName, label)
+    private data class VisibleSession(val startMs: Long, val packageName: String, val label: String)
+    private val visibleSince = HashMap<String, VisibleSession>()
 
     fun setup(service: BaseBlockingService) {
         this.service = service
@@ -70,6 +70,8 @@ class ViewTracker {
 
         scope.launch {
             service.dataStoreManager.settings.collectLatest { settings ->
+                // Flush in-progress sessions before switching rule sets.
+                flushAllSessions(TimeTools.getCurrentDate())
                 rebuildRules(settings.viewTrackerConfig.customRules)
             }
         }
@@ -104,22 +106,39 @@ class ViewTracker {
         if ((event.eventType and TARGET_EVENTS_MASK) == 0) return
 
         val pkg = event.packageName?.toString() ?: return
-        val entries = rulesByPackage[pkg] ?: return
+        val date = TimeTools.getCurrentDate()
+
+        // A window state change means the user navigated to a new screen; flush all sessions.
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            flushAllSessions(date)
+        }
+
+        val entries = rulesByPackage[pkg] ?: run {
+            // No rules for this pkg; any stale sessions from previous apps were already flushed above.
+            return
+        }
 
         try {
             val root = service.rootInActiveWindow ?: return
-            val date = TimeTools.getCurrentDate()
             val now = SystemClock.uptimeMillis()
 
             try {
                 for (entry in entries) {
-                    // Honour cooldown to avoid counting the same view every millisecond.
-                    val lastTime = lastCounted[entry.ruleId] ?: 0L
-                    if (now - lastTime < RULE_COOLDOWN_MS) continue
+                    val isVisible = viewBlockerHelper.hasRuleMatch(root, entry.rule)
+                    val session = visibleSince[entry.ruleId]
 
-                    if (viewBlockerHelper.hasRuleMatch(root, entry.rule)) {
-                        lastCounted[entry.ruleId] = now
-                        incrementCount(date, pkg, entry.ruleId, entry.label)
+                    if (isVisible) {
+                        if (session == null) {
+                            // View just became visible; start tracking.
+                            visibleSince[entry.ruleId] = VisibleSession(now, pkg, entry.label)
+                        }
+                    } else {
+                        if (session != null) {
+                            // View is gone; flush the accumulated duration.
+                            val duration = now - session.startMs
+                            visibleSince.remove(entry.ruleId)
+                            if (duration > 0) addDuration(date, pkg, entry.ruleId, entry.label, duration)
+                        }
                     }
                 }
             } finally {
@@ -131,8 +150,22 @@ class ViewTracker {
         }
     }
 
-    /** Increment the counter for (date, packageName, ruleId) in the Room database. */
-    private fun incrementCount(date: String, packageName: String, ruleId: String, label: String) {
+    /**
+     * Flush all in-progress visibility sessions by crediting the elapsed time since
+     * each view became visible.  Called on window transitions and on service destroy.
+     */
+    private fun flushAllSessions(date: String) {
+        if (visibleSince.isEmpty()) return
+        val now = SystemClock.uptimeMillis()
+        for ((ruleId, session) in visibleSince) {
+            val duration = now - session.startMs
+            if (duration > 0) addDuration(date, session.packageName, ruleId, session.label, duration)
+        }
+        visibleSince.clear()
+    }
+
+    /** Add [durationMs] to the running total for (date, packageName, ruleId) in Room. */
+    private fun addDuration(date: String, packageName: String, ruleId: String, label: String, durationMs: Long) {
         scope.launch {
             try {
                 val existing = statsDao.getStat(date, packageName, ruleId)
@@ -142,7 +175,7 @@ class ViewTracker {
                         packageName = packageName,
                         ruleId = ruleId,
                         label = label,
-                        count = (existing?.count ?: 0) + 1
+                        durationMs = (existing?.durationMs ?: 0L) + durationMs
                     )
                 )
             } catch (e: Exception) {
@@ -167,6 +200,7 @@ class ViewTracker {
     }
 
     fun onDestroy() {
-        // no persistent resources to clean up
+        // Flush any in-progress sessions so no tracked time is lost.
+        flushAllSessions(TimeTools.getCurrentDate())
     }
 }

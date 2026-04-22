@@ -276,7 +276,7 @@
 
     <!-- View Tracker -->
     <string name="view_tracker_title">View Stats</string>
-    <string name="view_tracker_subtitle">Times specific views were seen today (long-press to manage custom rules)</string>
+    <string name="view_tracker_subtitle">Duration specific views were visible today (long-press to manage custom rules)</string>
     <string name="view_tracker_no_data">No views tracked yet today</string>
     <string name="view_tracker_add_rule">Track Custom View</string>
     <string name="view_tracker_add_rule_hint">Enter a ViewBlocker-format rule. The pkg: token is pre-filled. Add an id:, path: or other selector and an optional comment: label.</string>

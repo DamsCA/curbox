@@ -10,5 +10,6 @@ data class ViewTrackerStatsEntity(
     val ruleId: String,
     /** Human-readable label shown in the UI. */
     val label: String,
-    val count: Int = 0
+    /** Total duration in milliseconds the view was visible today. */
+    val durationMs: Long = 0L
 )

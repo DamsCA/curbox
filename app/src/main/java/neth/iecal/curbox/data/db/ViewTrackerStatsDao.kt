@@ -8,10 +8,10 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface ViewTrackerStatsDao {
 
-    @Query("SELECT * FROM view_tracker_stats WHERE date = :date AND packageName = :packageName ORDER BY count DESC")
+    @Query("SELECT * FROM view_tracker_stats WHERE date = :date AND packageName = :packageName ORDER BY durationMs DESC")
     suspend fun getStatsForApp(date: String, packageName: String): List<ViewTrackerStatsEntity>
 
-    @Query("SELECT * FROM view_tracker_stats WHERE date = :date AND packageName = :packageName ORDER BY count DESC")
+    @Query("SELECT * FROM view_tracker_stats WHERE date = :date AND packageName = :packageName ORDER BY durationMs DESC")
     fun getStatsForAppFlow(date: String, packageName: String): Flow<List<ViewTrackerStatsEntity>>
 
     @Query("SELECT * FROM view_tracker_stats WHERE date = :date AND packageName = :packageName AND ruleId = :ruleId")

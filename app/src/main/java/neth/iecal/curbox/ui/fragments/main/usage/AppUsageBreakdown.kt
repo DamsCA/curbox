@@ -193,7 +193,7 @@ class AppUsageBreakdown(private val stat: AllAppsUsageFragment.Stat) : Fragment(
                 }
 
                 val countView = TextView(requireContext()).apply {
-                    text = stat.count.toString()
+                    text = TimeTools.formatTime(stat.durationMs, false)
                     textSize = 14f
                     val typedVal = android.util.TypedValue()
                     context.theme.resolveAttribute(com.google.android.material.R.attr.colorPrimary, typedVal, true)
