@@ -1,13 +1,15 @@
 package neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.mindful_messages
 
 import android.content.Intent
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
-import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
@@ -23,6 +25,15 @@ class MindfulMessagesFragment : Fragment() {
 
     companion object {
         const val FRAGMENT_ID = "MINDFUL_MESSAGES"
+
+        private val PRESET_COLORS = intArrayOf(
+            0x000000,
+            0x1A1A2E,
+            0x0D2818,
+            0x2A0D1A,
+            0x2A2A3A,
+            0xFFFFFF
+        )
     }
 
     private var _binding: FragmentMindfulMessagesBinding? = null
@@ -31,6 +42,8 @@ class MindfulMessagesFragment : Fragment() {
     private val viewModel: MindfulMessagesViewModel by viewModels()
     private var selectedApps = arrayListOf<String>()
     private var isUpdatingFromViewModel = false
+    private var selectedColorIndex = 0
+    private val colorChipViews = mutableListOf<View>()
 
     private val selectAppsLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -60,8 +73,47 @@ class MindfulMessagesFragment : Fragment() {
             requireActivity().finish()
         }
 
+        buildColorChips()
         setupUI()
         observeViewModel()
+    }
+
+    private fun buildColorChips() {
+        val container = binding.colorChipsContainer
+        val sizePx = (40 * resources.displayMetrics.density).toInt()
+        val marginPx = (8 * resources.displayMetrics.density).toInt()
+
+        PRESET_COLORS.forEachIndexed { index, color ->
+            val chip = FrameLayout(requireContext()).apply {
+                layoutParams = ViewGroup.MarginLayoutParams(sizePx, sizePx).apply {
+                    marginEnd = marginPx
+                }
+                val bg = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(Color.rgb((color shr 16) and 0xFF, (color shr 8) and 0xFF, color and 0xFF))
+                    setStroke((2 * resources.displayMetrics.density).toInt(), Color.TRANSPARENT)
+                }
+                background = bg
+                setOnClickListener { selectColor(index) }
+            }
+            colorChipViews.add(chip)
+            container.addView(chip)
+        }
+    }
+
+    private fun selectColor(index: Int) {
+        if (isUpdatingFromViewModel) return
+        selectedColorIndex = index
+        refreshChipSelection()
+        viewModel.updateBgColor(PRESET_COLORS[index])
+    }
+
+    private fun refreshChipSelection() {
+        colorChipViews.forEachIndexed { i, chip ->
+            val bg = chip.background as? GradientDrawable ?: return@forEachIndexed
+            val strokeColor = if (i == selectedColorIndex) Color.parseColor("#83D5C5") else Color.TRANSPARENT
+            bg.setStroke((3 * resources.displayMetrics.density).toInt(), strokeColor)
+        }
     }
 
     private fun setupUI() {
@@ -81,18 +133,24 @@ class MindfulMessagesFragment : Fragment() {
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
                 if (isUpdatingFromViewModel) return
-                viewModel.updateMessages( s?.toString() ?: "")
+                viewModel.updateMessages(s?.toString() ?: "")
             }
         })
 
-        binding.rgPosition.setOnCheckedChangeListener { _, checkedId ->
-            if (isUpdatingFromViewModel) return@setOnCheckedChangeListener
-            val position = when (checkedId) {
-                binding.rbTop.id -> Gravity.TOP
-                binding.rbBottom.id -> Gravity.BOTTOM
-                else -> Gravity.CENTER
-            }
-            viewModel.updatePosition(position)
+        binding.sliderTextSize.addOnChangeListener { _, value, fromUser ->
+            if (!fromUser) return@addOnChangeListener
+            binding.tvTextSizeLabel.text = getString(neth.iecal.curbox.R.string.text_size_value, value.toInt())
+            viewModel.updateTextSize(value)
+        }
+
+        binding.sliderOpacity.addOnChangeListener { _, value, fromUser ->
+            if (!fromUser) return@addOnChangeListener
+            binding.tvOpacityLabel.text = getString(neth.iecal.curbox.R.string.opacity_value, value.toInt())
+            viewModel.updateBgOpacity(value.toInt())
+        }
+
+        binding.positionPicker.onPositionChanged = { x, y ->
+            viewModel.updatePosition(x, y)
         }
     }
 
@@ -101,7 +159,7 @@ class MindfulMessagesFragment : Fragment() {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.configState.collect { config ->
                     isUpdatingFromViewModel = true
-                    
+
                     if (binding.switchIsActive.isChecked != config.isActive) {
                         binding.switchIsActive.isChecked = config.isActive
                     }
@@ -120,14 +178,23 @@ class MindfulMessagesFragment : Fragment() {
                         }
                     }
 
-                    val checkedId = when (config.position) {
-                        Gravity.TOP -> binding.rbTop.id
-                        Gravity.BOTTOM -> binding.rbBottom.id
-                        else -> binding.rbCenter.id
+                    if (binding.sliderTextSize.value != config.textSize) {
+                        binding.sliderTextSize.value = config.textSize.coerceIn(8f, 28f)
                     }
-                    if (binding.rgPosition.checkedRadioButtonId != checkedId) {
-                        binding.rgPosition.check(checkedId)
+                    binding.tvTextSizeLabel.text = getString(neth.iecal.curbox.R.string.text_size_value, config.textSize.toInt())
+
+                    if (binding.sliderOpacity.value != config.bgOpacity.toFloat()) {
+                        binding.sliderOpacity.value = config.bgOpacity.toFloat().coerceIn(0f, 100f)
                     }
+                    binding.tvOpacityLabel.text = getString(neth.iecal.curbox.R.string.opacity_value, config.bgOpacity)
+
+                    val colorIdx = PRESET_COLORS.indexOfFirst { it == config.bgColor }.takeIf { it >= 0 } ?: 0
+                    if (selectedColorIndex != colorIdx) {
+                        selectedColorIndex = colorIdx
+                        refreshChipSelection()
+                    }
+
+                    binding.positionPicker.setPosition(config.positionX, config.positionY)
 
                     isUpdatingFromViewModel = false
                 }
