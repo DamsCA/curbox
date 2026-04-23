@@ -3,6 +3,7 @@ package neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.reel_counte
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -169,6 +170,7 @@ class ReelCounterFragment : Fragment() {
                 }
 
                 binding.reelPositionPicker.setPosition(config.positionX, config.positionY)
+                updatePreview(config)
 
                 isUpdatingUi = false
             }
@@ -198,6 +200,36 @@ class ReelCounterFragment : Fragment() {
         viewModel.canGoNext.observe(viewLifecycleOwner) { canGo ->
             binding.btnNextWeek.alpha = if (canGo) 1f else 0.3f
             binding.btnNextWeek.isEnabled = canGo
+        }
+    }
+
+    private fun updatePreview(config: ReelCounterOverlayConfig) {
+        val container = binding.previewContainer
+        val badge = binding.previewOverlayBadge
+
+        val r = (config.bgColor shr 16) and 0xFF
+        val g = (config.bgColor shr 8) and 0xFF
+        val b = config.bgColor and 0xFF
+        val alpha = (config.bgOpacity * 255 / 100)
+        badge.setBackgroundColor(Color.argb(alpha, r, g, b))
+
+        val screenW = resources.displayMetrics.widthPixels.toFloat()
+        container.post {
+            val cw = container.width.toFloat()
+            val ch = container.height.toFloat()
+            if (cw == 0f || ch == 0f) return@post
+
+            val scale = cw / screenW
+            val scaledTextPx = config.textSize * resources.displayMetrics.scaledDensity * scale
+            binding.previewCountText.setTextSize(TypedValue.COMPLEX_UNIT_PX, scaledTextPx)
+            binding.previewTimeText.setTextSize(TypedValue.COMPLEX_UNIT_PX, scaledTextPx * 0.21f)
+
+            badge.post {
+                val bw = badge.width.toFloat()
+                val bh = badge.height.toFloat()
+                badge.x = (cw * config.positionX - bw / 2f).coerceIn(0f, (cw - bw).coerceAtLeast(0f))
+                badge.y = (ch * config.positionY - bh / 2f).coerceIn(0f, (ch - bh).coerceAtLeast(0f))
+            }
         }
     }
 

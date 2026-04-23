@@ -6,6 +6,7 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -195,9 +196,42 @@ class MindfulMessagesFragment : Fragment() {
                     }
 
                     binding.positionPicker.setPosition(config.positionX, config.positionY)
+                    updatePreview(config)
 
                     isUpdatingFromViewModel = false
                 }
+            }
+        }
+    }
+
+    private fun updatePreview(config: neth.iecal.curbox.data.models.MindfulMessageConfig) {
+        val container = binding.previewContainer
+        val badge = binding.previewOverlayBadge
+
+        val r = (config.bgColor shr 16) and 0xFF
+        val g = (config.bgColor shr 8) and 0xFF
+        val b = config.bgColor and 0xFF
+        val alpha = (config.bgOpacity * 255 / 100)
+        badge.setBackgroundColor(Color.argb(alpha, r, g, b))
+
+        val previewText = config.messages.lines().take(3).joinToString("\n").ifBlank { "Sample message" }
+        binding.previewMessageText.text = previewText
+
+        val screenW = resources.displayMetrics.widthPixels.toFloat()
+        container.post {
+            val cw = container.width.toFloat()
+            val ch = container.height.toFloat()
+            if (cw == 0f || ch == 0f) return@post
+
+            val scale = cw / screenW
+            val scaledTextPx = config.textSize * resources.displayMetrics.scaledDensity * scale
+            binding.previewMessageText.setTextSize(TypedValue.COMPLEX_UNIT_PX, scaledTextPx)
+
+            badge.post {
+                val bw = badge.width.toFloat()
+                val bh = badge.height.toFloat()
+                badge.x = (cw * config.positionX - bw / 2f).coerceIn(0f, (cw - bw).coerceAtLeast(0f))
+                badge.y = (ch * config.positionY - bh / 2f).coerceIn(0f, (ch - bh).coerceAtLeast(0f))
             }
         }
     }

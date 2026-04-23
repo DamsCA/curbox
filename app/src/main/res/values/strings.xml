@@ -275,6 +275,7 @@
     <string name="picker_active_text">Tap elements on screen to select them</string>
 
     <string name="appearance">Appearance</string>
+    <string name="live_preview">Live Preview</string>
     <string name="text_size_label">Text Size: 14sp</string>
     <string name="text_size_value">Text Size: %dsp</string>
     <string name="background_color">Background Color</string>

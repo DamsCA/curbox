@@ -100,6 +100,64 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:text="@string/live_preview"
+                android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
+                android:textColor="?attr/colorOnSurface"
+                android:layout_marginBottom="16dp" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp"
+                android:layout_marginBottom="12dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="20dp"
+                    android:paddingVertical="16dp"
+                    android:gravity="center">
+
+                    <FrameLayout
+                        android:id="@+id/previewContainer"
+                        android:layout_width="160dp"
+                        android:layout_height="284dp"
+                        android:background="@drawable/bg_preview_phone"
+                        android:clipChildren="true"
+                        android:clipToPadding="true">
+
+                        <LinearLayout
+                            android:id="@+id/previewOverlayBadge"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="4dp">
+
+                            <TextView
+                                android:id="@+id/previewMessageText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/live_preview"
+                                android:textColor="#FFFFFF"
+                                android:maxLines="3"
+                                android:ellipsize="end"
+                                android:alpha="0.8" />
+
+                        </LinearLayout>
+
+                    </FrameLayout>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:text="@string/appearance"
                 android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
                 android:textColor="?attr/colorOnSurface"
@@ -246,7 +304,7 @@
                     <neth.iecal.curbox.ui.views.OverlayPositionPickerView
                         android:id="@+id/positionPicker"
                         android:layout_width="match_parent"
-                        android:layout_height="180dp" />
+                        android:layout_height="wrap_content" />
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

@@ -47,6 +47,12 @@ class OverlayPositionPickerView @JvmOverloads constructor(
         invalidate()
     }
 
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        val width = MeasureSpec.getSize(widthMeasureSpec)
+        val height = (width * 16f / 9f).toInt()
+        setMeasuredDimension(width, height)
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         bgRect.set(0f, 0f, width.toFloat(), height.toFloat())
