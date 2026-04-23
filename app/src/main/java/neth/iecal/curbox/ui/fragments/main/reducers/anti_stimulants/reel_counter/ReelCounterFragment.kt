@@ -1,18 +1,23 @@
 package neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.reel_counter
 
+import android.annotation.SuppressLint
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
-import android.util.TypedValue
+import android.view.Gravity
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import neth.iecal.curbox.R
 import neth.iecal.curbox.data.models.ReelCounterOverlayConfig
 import neth.iecal.curbox.databinding.FragmentReelCounterBinding
 
@@ -38,6 +43,7 @@ class ReelCounterFragment : Fragment() {
     private var isUpdatingUi = false
     private var selectedColorIndex = 0
     private val colorChipViews = mutableListOf<View>()
+    private var positionScrim: View? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -120,21 +126,20 @@ class ReelCounterFragment : Fragment() {
 
         binding.sliderReelTextSize.addOnChangeListener { _, value, fromUser ->
             if (!fromUser) return@addOnChangeListener
-            binding.tvReelTextSizeLabel.text = getString(neth.iecal.curbox.R.string.text_size_value, value.toInt())
+            binding.tvReelTextSizeLabel.text = getString(R.string.text_size_value, value.toInt())
             val current = viewModel.overlayConfig.value
             viewModel.updateOverlayConfig(current.copy(textSize = value))
         }
 
         binding.sliderReelOpacity.addOnChangeListener { _, value, fromUser ->
             if (!fromUser) return@addOnChangeListener
-            binding.tvReelOpacityLabel.text = getString(neth.iecal.curbox.R.string.opacity_value, value.toInt())
+            binding.tvReelOpacityLabel.text = getString(R.string.opacity_value, value.toInt())
             val current = viewModel.overlayConfig.value
             viewModel.updateOverlayConfig(current.copy(bgOpacity = value.toInt()))
         }
 
-        binding.reelPositionPicker.onPositionChanged = { x, y ->
-            val current = viewModel.overlayConfig.value
-            viewModel.updateOverlayConfig(current.copy(positionX = x, positionY = y))
+        binding.btnSetPosition.setOnClickListener {
+            showPositionDragOverlay()
         }
     }
 
@@ -156,21 +161,18 @@ class ReelCounterFragment : Fragment() {
                 if (binding.sliderReelTextSize.value != config.textSize) {
                     binding.sliderReelTextSize.value = config.textSize.coerceIn(24f, 120f)
                 }
-                binding.tvReelTextSizeLabel.text = getString(neth.iecal.curbox.R.string.text_size_value, config.textSize.toInt())
+                binding.tvReelTextSizeLabel.text = getString(R.string.text_size_value, config.textSize.toInt())
 
                 if (binding.sliderReelOpacity.value != config.bgOpacity.toFloat()) {
                     binding.sliderReelOpacity.value = config.bgOpacity.toFloat().coerceIn(0f, 100f)
                 }
-                binding.tvReelOpacityLabel.text = getString(neth.iecal.curbox.R.string.opacity_value, config.bgOpacity)
+                binding.tvReelOpacityLabel.text = getString(R.string.opacity_value, config.bgOpacity)
 
                 val colorIdx = PRESET_COLORS.indexOfFirst { it == config.bgColor }.takeIf { it >= 0 } ?: 0
                 if (selectedColorIndex != colorIdx) {
                     selectedColorIndex = colorIdx
                     refreshChipSelection()
                 }
-
-                binding.reelPositionPicker.setPosition(config.positionX, config.positionY)
-                updatePreview(config)
 
                 isUpdatingUi = false
             }
@@ -203,37 +205,109 @@ class ReelCounterFragment : Fragment() {
         }
     }
 
-    private fun updatePreview(config: ReelCounterOverlayConfig) {
-        val container = binding.previewContainer
-        val badge = binding.previewOverlayBadge
+    @SuppressLint("ClickableViewAccessibility")
+    private fun showPositionDragOverlay() {
+        if (positionScrim != null) return
+        val config = viewModel.overlayConfig.value
+        val decorView = requireActivity().window.decorView as FrameLayout
+        val dm = resources.displayMetrics
+
+        val scrim = FrameLayout(requireContext()).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+            setBackgroundColor(Color.argb(180, 0, 0, 0))
+        }
+
+        val hint = TextView(requireContext()).apply {
+            text = getString(R.string.position_hint)
+            setTextColor(Color.WHITE)
+            textSize = 14f
+            setPadding(32, 0, 32, 0)
+        }
+        scrim.addView(hint, FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.WRAP_CONTENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT
+        ).also {
+            it.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+            it.topMargin = (56 * dm.density).toInt()
+        })
+
+        val widget = LayoutInflater.from(requireContext())
+            .inflate(R.layout.overlay_usage_stat, scrim, false)
 
         val r = (config.bgColor shr 16) and 0xFF
         val g = (config.bgColor shr 8) and 0xFF
         val b = config.bgColor and 0xFF
-        val alpha = (config.bgOpacity * 255 / 100)
-        badge.setBackgroundColor(Color.argb(alpha, r, g, b))
+        widget.setBackgroundColor(Color.argb(config.bgOpacity * 255 / 100, r, g, b))
+        widget.findViewById<TextView>(R.id.reel_counter).apply {
+            visibility = View.VISIBLE
+            text = "42"
+            textSize = config.textSize
+        }
+        widget.findViewById<TextView>(R.id.time_elapsed_txt).textSize = config.textSize * 0.21f
 
-        val screenW = resources.displayMetrics.widthPixels.toFloat()
-        container.post {
-            val cw = container.width.toFloat()
-            val ch = container.height.toFloat()
-            if (cw == 0f || ch == 0f) return@post
+        scrim.addView(widget, FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.WRAP_CONTENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT
+        ))
 
-            val scale = cw / screenW
-            val scaledTextPx = config.textSize * resources.displayMetrics.scaledDensity * scale
-            binding.previewCountText.setTextSize(TypedValue.COMPLEX_UNIT_PX, scaledTextPx)
-            binding.previewTimeText.setTextSize(TypedValue.COMPLEX_UNIT_PX, scaledTextPx * 0.21f)
+        // Position after layout so we know the widget's dimensions
+        widget.post {
+            widget.x = (dm.widthPixels * config.positionX - widget.width / 2f)
+                .coerceIn(0f, (dm.widthPixels - widget.width).toFloat().coerceAtLeast(0f))
+            widget.y = (dm.heightPixels * config.positionY - widget.height / 2f)
+                .coerceIn(0f, (dm.heightPixels - widget.height).toFloat().coerceAtLeast(0f))
+        }
 
-            badge.post {
-                val bw = badge.width.toFloat()
-                val bh = badge.height.toFloat()
-                badge.x = (cw * config.positionX - bw / 2f).coerceIn(0f, (cw - bw).coerceAtLeast(0f))
-                badge.y = (ch * config.positionY - bh / 2f).coerceIn(0f, (ch - bh).coerceAtLeast(0f))
+        var downOffsetX = 0f
+        var downOffsetY = 0f
+        widget.setOnTouchListener { v, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    downOffsetX = event.rawX - v.x
+                    downOffsetY = event.rawY - v.y
+                    true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    v.x = (event.rawX - downOffsetX)
+                        .coerceIn(0f, (dm.widthPixels - v.width).toFloat().coerceAtLeast(0f))
+                    v.y = (event.rawY - downOffsetY)
+                        .coerceIn(0f, (dm.heightPixels - v.height).toFloat().coerceAtLeast(0f))
+                    true
+                }
+                else -> false
             }
         }
+
+        val okBtn = MaterialButton(requireContext()).apply {
+            text = getString(android.R.string.ok)
+            setOnClickListener {
+                val posX = ((widget.x + widget.width / 2f) / dm.widthPixels).coerceIn(0f, 1f)
+                val posY = ((widget.y + widget.height / 2f) / dm.heightPixels).coerceIn(0f, 1f)
+                viewModel.updateOverlayConfig(config.copy(positionX = posX, positionY = posY))
+                decorView.removeView(scrim)
+                positionScrim = null
+            }
+        }
+        scrim.addView(okBtn, FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.WRAP_CONTENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT
+        ).also {
+            it.gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+            it.bottomMargin = (32 * dm.density).toInt()
+        })
+
+        decorView.addView(scrim)
+        positionScrim = scrim
     }
 
     override fun onDestroyView() {
+        positionScrim?.let {
+            (activity?.window?.decorView as? FrameLayout)?.removeView(it)
+            positionScrim = null
+        }
         super.onDestroyView()
         _binding = null
     }

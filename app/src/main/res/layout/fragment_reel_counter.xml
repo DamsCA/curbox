@@ -138,74 +138,10 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/live_preview"
-            android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
-            android:textColor="?attr/colorOnSurface"
-            android:layout_marginTop="32dp"
-            android:layout_marginBottom="16dp" />
-
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardBackgroundColor="?attr/colorSurfaceContainer"
-            app:cardCornerRadius="20dp"
-            app:cardElevation="0dp"
-            app:strokeWidth="0dp"
-            android:layout_marginBottom="12dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:paddingHorizontal="20dp"
-                android:paddingVertical="16dp"
-                android:gravity="center">
-
-                <FrameLayout
-                    android:id="@+id/previewContainer"
-                    android:layout_width="160dp"
-                    android:layout_height="284dp"
-                    android:background="@drawable/bg_preview_phone"
-                    android:clipChildren="true"
-                    android:clipToPadding="true">
-
-                    <LinearLayout
-                        android:id="@+id/previewOverlayBadge"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:padding="4dp">
-
-                        <TextView
-                            android:id="@+id/previewCountText"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="42"
-                            android:textColor="#FFFFFF"
-                            android:alpha="0.8" />
-
-                        <TextView
-                            android:id="@+id/previewTimeText"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="0:30"
-                            android:textColor="#FFFFFF"
-                            android:alpha="0.8" />
-
-                    </LinearLayout>
-
-                </FrameLayout>
-
-            </LinearLayout>
-
-        </com.google.android.material.card.MaterialCardView>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
             android:text="@string/appearance"
             android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
             android:textColor="?attr/colorOnSurface"
+            android:layout_marginTop="32dp"
             android:layout_marginBottom="16dp" />
 
         <com.google.android.material.card.MaterialCardView
@@ -346,10 +282,12 @@
                     android:textColor="?attr/colorOutline"
                     android:layout_marginBottom="12dp" />
 
-                <neth.iecal.curbox.ui.views.OverlayPositionPickerView
-                    android:id="@+id/reelPositionPicker"
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnSetPosition"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content" />
+                    android:layout_height="wrap_content"
+                    android:text="@string/btn_set_position"
+                    app:cornerRadius="12dp" />
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>

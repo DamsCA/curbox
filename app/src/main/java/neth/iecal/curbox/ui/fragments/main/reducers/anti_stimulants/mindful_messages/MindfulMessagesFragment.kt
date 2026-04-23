@@ -1,16 +1,19 @@
 package neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.mindful_messages
 
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
-import android.util.TypedValue
+import android.view.Gravity
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
@@ -18,7 +21,10 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.launch
+import neth.iecal.curbox.R
+import neth.iecal.curbox.data.models.MindfulMessageConfig
 import neth.iecal.curbox.databinding.FragmentMindfulMessagesBinding
 import neth.iecal.curbox.ui.activity.SelectAppsActivity
 
@@ -45,6 +51,7 @@ class MindfulMessagesFragment : Fragment() {
     private var isUpdatingFromViewModel = false
     private var selectedColorIndex = 0
     private val colorChipViews = mutableListOf<View>()
+    private var positionScrim: View? = null
 
     private val selectAppsLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -140,18 +147,18 @@ class MindfulMessagesFragment : Fragment() {
 
         binding.sliderTextSize.addOnChangeListener { _, value, fromUser ->
             if (!fromUser) return@addOnChangeListener
-            binding.tvTextSizeLabel.text = getString(neth.iecal.curbox.R.string.text_size_value, value.toInt())
+            binding.tvTextSizeLabel.text = getString(R.string.text_size_value, value.toInt())
             viewModel.updateTextSize(value)
         }
 
         binding.sliderOpacity.addOnChangeListener { _, value, fromUser ->
             if (!fromUser) return@addOnChangeListener
-            binding.tvOpacityLabel.text = getString(neth.iecal.curbox.R.string.opacity_value, value.toInt())
+            binding.tvOpacityLabel.text = getString(R.string.opacity_value, value.toInt())
             viewModel.updateBgOpacity(value.toInt())
         }
 
-        binding.positionPicker.onPositionChanged = { x, y ->
-            viewModel.updatePosition(x, y)
+        binding.btnSetPosition.setOnClickListener {
+            showPositionDragOverlay()
         }
     }
 
@@ -182,12 +189,12 @@ class MindfulMessagesFragment : Fragment() {
                     if (binding.sliderTextSize.value != config.textSize) {
                         binding.sliderTextSize.value = config.textSize.coerceIn(8f, 28f)
                     }
-                    binding.tvTextSizeLabel.text = getString(neth.iecal.curbox.R.string.text_size_value, config.textSize.toInt())
+                    binding.tvTextSizeLabel.text = getString(R.string.text_size_value, config.textSize.toInt())
 
                     if (binding.sliderOpacity.value != config.bgOpacity.toFloat()) {
                         binding.sliderOpacity.value = config.bgOpacity.toFloat().coerceIn(0f, 100f)
                     }
-                    binding.tvOpacityLabel.text = getString(neth.iecal.curbox.R.string.opacity_value, config.bgOpacity)
+                    binding.tvOpacityLabel.text = getString(R.string.opacity_value, config.bgOpacity)
 
                     val colorIdx = PRESET_COLORS.indexOfFirst { it == config.bgColor }.takeIf { it >= 0 } ?: 0
                     if (selectedColorIndex != colorIdx) {
@@ -195,45 +202,108 @@ class MindfulMessagesFragment : Fragment() {
                         refreshChipSelection()
                     }
 
-                    binding.positionPicker.setPosition(config.positionX, config.positionY)
-                    updatePreview(config)
-
                     isUpdatingFromViewModel = false
                 }
             }
         }
     }
 
-    private fun updatePreview(config: neth.iecal.curbox.data.models.MindfulMessageConfig) {
-        val container = binding.previewContainer
-        val badge = binding.previewOverlayBadge
+    @SuppressLint("ClickableViewAccessibility")
+    private fun showPositionDragOverlay() {
+        if (positionScrim != null) return
+        val config = viewModel.configState.value
+        val decorView = requireActivity().window.decorView as FrameLayout
+        val dm = resources.displayMetrics
+
+        val scrim = FrameLayout(requireContext()).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+            setBackgroundColor(Color.argb(180, 0, 0, 0))
+        }
+
+        val hint = TextView(requireContext()).apply {
+            text = getString(R.string.position_hint)
+            setTextColor(Color.WHITE)
+            textSize = 14f
+            setPadding(32, 0, 32, 0)
+        }
+        scrim.addView(hint, FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.WRAP_CONTENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT
+        ).also {
+            it.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+            it.topMargin = (56 * dm.density).toInt()
+        })
+
+        val widget = LayoutInflater.from(requireContext())
+            .inflate(R.layout.mindfulmsg_overlay, scrim, false)
 
         val r = (config.bgColor shr 16) and 0xFF
         val g = (config.bgColor shr 8) and 0xFF
         val b = config.bgColor and 0xFF
-        val alpha = (config.bgOpacity * 255 / 100)
-        badge.setBackgroundColor(Color.argb(alpha, r, g, b))
+        val alpha = config.bgOpacity * 255 / 100
+        widget.findViewById<TextView>(R.id.mindful_txt).apply {
+            text = config.messages.lines().firstOrNull()?.ifBlank { "Mindful message" } ?: "Mindful message"
+            textSize = config.textSize
+            setTextColor(Color.WHITE)
+            setBackgroundColor(Color.argb(alpha, r, g, b))
+            setPadding(32, 32, 32, 32)
+        }
 
-        val previewText = config.messages.lines().take(3).joinToString("\n").ifBlank { "Sample message" }
-        binding.previewMessageText.text = previewText
+        scrim.addView(widget, FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.WRAP_CONTENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT
+        ))
 
-        val screenW = resources.displayMetrics.widthPixels.toFloat()
-        container.post {
-            val cw = container.width.toFloat()
-            val ch = container.height.toFloat()
-            if (cw == 0f || ch == 0f) return@post
+        widget.post {
+            widget.x = (dm.widthPixels * config.positionX - widget.width / 2f)
+                .coerceIn(0f, (dm.widthPixels - widget.width).toFloat().coerceAtLeast(0f))
+            widget.y = (dm.heightPixels * config.positionY - widget.height / 2f)
+                .coerceIn(0f, (dm.heightPixels - widget.height).toFloat().coerceAtLeast(0f))
+        }
 
-            val scale = cw / screenW
-            val scaledTextPx = config.textSize * resources.displayMetrics.scaledDensity * scale
-            binding.previewMessageText.setTextSize(TypedValue.COMPLEX_UNIT_PX, scaledTextPx)
-
-            badge.post {
-                val bw = badge.width.toFloat()
-                val bh = badge.height.toFloat()
-                badge.x = (cw * config.positionX - bw / 2f).coerceIn(0f, (cw - bw).coerceAtLeast(0f))
-                badge.y = (ch * config.positionY - bh / 2f).coerceIn(0f, (ch - bh).coerceAtLeast(0f))
+        var downOffsetX = 0f
+        var downOffsetY = 0f
+        widget.setOnTouchListener { v, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    downOffsetX = event.rawX - v.x
+                    downOffsetY = event.rawY - v.y
+                    true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    v.x = (event.rawX - downOffsetX)
+                        .coerceIn(0f, (dm.widthPixels - v.width).toFloat().coerceAtLeast(0f))
+                    v.y = (event.rawY - downOffsetY)
+                        .coerceIn(0f, (dm.heightPixels - v.height).toFloat().coerceAtLeast(0f))
+                    true
+                }
+                else -> false
             }
         }
+
+        val okBtn = MaterialButton(requireContext()).apply {
+            text = getString(android.R.string.ok)
+            setOnClickListener {
+                val posX = ((widget.x + widget.width / 2f) / dm.widthPixels).coerceIn(0f, 1f)
+                val posY = ((widget.y + widget.height / 2f) / dm.heightPixels).coerceIn(0f, 1f)
+                viewModel.updatePosition(posX, posY)
+                decorView.removeView(scrim)
+                positionScrim = null
+            }
+        }
+        scrim.addView(okBtn, FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.WRAP_CONTENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT
+        ).also {
+            it.gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+            it.bottomMargin = (32 * dm.density).toInt()
+        })
+
+        decorView.addView(scrim)
+        positionScrim = scrim
     }
 
     private fun updateAppsButtonText() {
@@ -241,6 +311,10 @@ class MindfulMessagesFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        positionScrim?.let {
+            (activity?.window?.decorView as? FrameLayout)?.removeView(it)
+            positionScrim = null
+        }
         super.onDestroyView()
         _binding = null
     }
