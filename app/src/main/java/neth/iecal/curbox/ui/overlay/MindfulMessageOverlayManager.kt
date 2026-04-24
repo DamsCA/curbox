@@ -51,7 +51,7 @@ class MindfulMessageOverlayManager(private val context: Context) {
 
         textView?.apply {
             textSize = config.textSize
-            setTextColor(Color.WHITE)
+            setTextColor(Color.argb(config.textOpacity * 255 / 100, 255, 255, 255))
             setBackgroundColor(Color.argb(alpha, r, g, b))
             setPadding(32, 32, 32, 32)
         }

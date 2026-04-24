@@ -6,6 +6,7 @@ data class MindfulMessageConfig(
     val messages: String =
         "Is this really important? \n App Usage: {app_usage_today} \n Screen Time: {screentime_today} \n Session: {live_session_duration}",
     val textSize: Float = 14f,
+    val textOpacity: Int = 100,
     val bgColor: Int = 0x000000,
     val bgOpacity: Int = 37,
     val positionX: Float = 0.5f,

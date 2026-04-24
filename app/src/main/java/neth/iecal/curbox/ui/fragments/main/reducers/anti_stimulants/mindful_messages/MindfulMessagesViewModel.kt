@@ -51,6 +51,11 @@ class MindfulMessagesViewModel(application: Application) : AndroidViewModel(appl
         if (current.bgOpacity != bgOpacity) updateConfig(current.copy(bgOpacity = bgOpacity))
     }
 
+    fun updateTextOpacity(textOpacity: Int) {
+        val current = _configState.value
+        if (current.textOpacity != textOpacity) updateConfig(current.copy(textOpacity = textOpacity))
+    }
+
     fun updatePosition(positionX: Float, positionY: Float) {
         val current = _configState.value
         if (current.positionX != positionX || current.positionY != positionY) {

@@ -37,7 +37,9 @@ class ReelsOverlayManager(private val context: Context) {
 
         binding?.root?.setBackgroundColor(Color.argb(alpha, r, g, b))
         binding?.reelCounter?.textSize = config.textSize
+        binding?.reelCounter?.alpha = config.textOpacity / 100f
         binding?.timeElapsedTxt?.textSize = config.textSize * 0.21f
+        binding?.timeElapsedTxt?.alpha = config.textOpacity / 100f
 
         val dm = context.resources.displayMetrics
         val screenWidth = dm.widthPixels

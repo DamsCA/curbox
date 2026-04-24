@@ -281,6 +281,8 @@
     <string name="background_color">Background Color</string>
     <string name="opacity_label">Opacity: 37%</string>
     <string name="opacity_value">Opacity: %d%%</string>
+    <string name="text_opacity_label">Text Opacity: 100%</string>
+    <string name="text_opacity_value">Text Opacity: %d%%</string>
     <string name="position_label">Position</string>
     <string name="position_hint">Drag the indicator to set where the overlay appears</string>
 </resources>
