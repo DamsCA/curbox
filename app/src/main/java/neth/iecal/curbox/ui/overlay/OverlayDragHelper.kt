@@ -151,9 +151,11 @@ object OverlayDragHelper {
                 // Use screen-absolute coordinates to match the overlay manager's coordinate space.
                 val loc = IntArray(2)
                 widget.getLocationOnScreen(loc)
-                val posXSaved = (loc[0] + widget.width / 2f) / dm.widthPixels
-                val posYSaved = (loc[1] + widget.height / 2f) / dm.heightPixels
-                onPositionSaved(posXSaved.coerceIn(0f, 1f), posYSaved.coerceIn(0f, 1f))
+                if (dm.widthPixels > 0 && dm.heightPixels > 0) {
+                    val posXSaved = (loc[0] + widget.width / 2f) / dm.widthPixels
+                    val posYSaved = (loc[1] + widget.height / 2f) / dm.heightPixels
+                    onPositionSaved(posXSaved.coerceIn(0f, 1f), posYSaved.coerceIn(0f, 1f))
+                }
                 decorView.removeView(scrim)
                 onDismiss()
             }
