@@ -4,7 +4,6 @@ import android.accessibilityservice.AccessibilityService
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
-import android.os.Build
 import android.os.SystemClock
 import android.view.accessibility.AccessibilityEvent
 import androidx.core.app.NotificationCompat
@@ -46,18 +45,16 @@ open class BaseBlockingService : AccessibilityService() {
 
     private fun startForegroundNotification() {
         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        if (nm.getNotificationChannel(FOREGROUND_CHANNEL_ID) == null) {
-            val channel = NotificationChannel(
-                FOREGROUND_CHANNEL_ID,
-                getString(R.string.fg_service_channel_name),
-                NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                setShowBadge(false)
-                setSound(null, null)
-                enableVibration(false)
-            }
-            nm.createNotificationChannel(channel)
+        val channel = NotificationChannel(
+            FOREGROUND_CHANNEL_ID,
+            getString(R.string.fg_service_channel_name),
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            setShowBadge(false)
+            setSound(null, null)
+            enableVibration(false)
         }
+        nm.createNotificationChannel(channel)
         val notification = NotificationCompat.Builder(this, FOREGROUND_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(getString(R.string.fg_service_title))
@@ -70,12 +67,7 @@ open class BaseBlockingService : AccessibilityService() {
     }
 
     private fun stopForegroundNotification() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            stopForeground(STOP_FOREGROUND_REMOVE)
-        } else {
-            @Suppress("DEPRECATION")
-            stopForeground(true)
-        }
+        stopForeground(STOP_FOREGROUND_REMOVE)
     }
 
 
