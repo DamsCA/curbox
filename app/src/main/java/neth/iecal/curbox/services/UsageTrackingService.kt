@@ -16,6 +16,8 @@ import neth.iecal.curbox.anti_stimulants.MindfulMessageTracker
 
 class UsageTrackingService : BaseBlockingService() {
 
+    override val foregroundNotificationId: Int = 9002
+
 
     private val reelsOverlayManager by lazy { ReelsOverlayManager(this) }
     private val reelsCountTracker = ReelsCountTracker()
@@ -35,6 +37,7 @@ class UsageTrackingService : BaseBlockingService() {
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onServiceConnected() {
+        super.onServiceConnected()
         serviceInfo = AccessibilityServiceInfo().apply {
             eventTypes =
                 AccessibilityEvent.TYPE_VIEW_SCROLLED or AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED

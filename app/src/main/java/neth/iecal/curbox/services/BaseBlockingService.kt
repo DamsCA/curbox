@@ -1,13 +1,24 @@
 package neth.iecal.curbox.services
 
 import android.accessibilityservice.AccessibilityService
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
+import android.os.Build
 import android.os.SystemClock
 import android.view.accessibility.AccessibilityEvent
+import androidx.core.app.NotificationCompat
+import neth.iecal.curbox.R
 import neth.iecal.curbox.utils.DataStoreManager
-import neth.iecal.curbox.anti_stimulants.MindfulMessageTracker
 import kotlin.lazy
 
 open class BaseBlockingService : AccessibilityService() {
+
+    companion object {
+        private const val FOREGROUND_CHANNEL_ID = "curbox_fg_service"
+    }
+
+    protected open val foregroundNotificationId: Int = 9001
 
     val dataStoreManager  by lazy {
         DataStoreManager(this)
@@ -19,16 +30,52 @@ open class BaseBlockingService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+        startForegroundNotification()
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
     }
 
     override fun onDestroy() {
+        stopForegroundNotification()
         super.onDestroy()
     }
 
     override fun onInterrupt() {
+    }
+
+    private fun startForegroundNotification() {
+        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (nm.getNotificationChannel(FOREGROUND_CHANNEL_ID) == null) {
+            val channel = NotificationChannel(
+                FOREGROUND_CHANNEL_ID,
+                getString(R.string.fg_service_channel_name),
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                setShowBadge(false)
+                setSound(null, null)
+                enableVibration(false)
+            }
+            nm.createNotificationChannel(channel)
+        }
+        val notification = NotificationCompat.Builder(this, FOREGROUND_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(getString(R.string.fg_service_title))
+            .setContentText(getString(R.string.fg_service_description))
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setOngoing(true)
+            .setSilent(true)
+            .build()
+        startForeground(foregroundNotificationId, notification)
+    }
+
+    private fun stopForegroundNotification() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        } else {
+            @Suppress("DEPRECATION")
+            stopForeground(true)
+        }
     }
 
 
