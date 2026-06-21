@@ -97,21 +97,7 @@ class SelfDefense {
             text.contains("device admin")
         )
 
-        // Protege le VPN-filtre RethinkDNS + le verrouillage always-on pendant le verrou.
-        val dangerousVpnPage = (
-            text.contains("rethink") && (
-                text.contains("désinstaller") || text.contains("uninstall") ||
-                text.contains("forcer l'arrêt") || text.contains("force stop") ||
-                text.contains("vpn")
-            )
-        ) || (
-            text.contains("vpn") && (
-                text.contains("toujours actif") || text.contains("always-on") ||
-                text.contains("bloquer les connexions") || text.contains("block connections")
-            )
-        )
-
-        if (mentionsOurServices || dangerousFocusPage || dangerousVpnPage) {
+        if (mentionsOurServices || dangerousFocusPage) {
             lastAction = SystemClock.uptimeMillis()
             svc.pressBack()
             svc.pressHome()
@@ -119,18 +105,10 @@ class SelfDefense {
     }
 
     private fun collectAllWindowsText(svc: BaseBlockingService, sb: StringBuilder) {
-        runCatching {
-            val windows = svc.windows
-            if (!windows.isNullOrEmpty()) {
-                for (w in windows) {
-                    collectText(w.root, sb, 0)
-                    if (sb.length > 9000) return
-                }
-            }
-        }
-        if (sb.isEmpty()) {
-            runCatching { collectText(svc.rootInActiveWindow, sb, 0) }
-        }
+        // Only the FOCUSED window. Reading all windows also captured persistent
+        // notification / status-bar text, causing false positives that blocked every
+        // Settings screen. The active window holds the dialog/screen we care about.
+        runCatching { collectText(svc.rootInActiveWindow, sb, 0) }
     }
 
     private fun collectText(node: AccessibilityNodeInfo?, sb: StringBuilder, depth: Int) {
