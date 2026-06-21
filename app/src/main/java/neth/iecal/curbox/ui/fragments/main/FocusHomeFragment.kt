@@ -91,10 +91,15 @@ class FocusHomeFragment : Fragment() {
             .setNegativeButton("Annuler", null)
             .setPositiveButton("Verrouiller") { _, _ ->
                 val mins = input.text.toString().trim().toIntOrNull()
-                if (mins != null && mins > 0) {
+                if (mins != null && mins in 1..FocusLock.MAX_MINUTES) {
                     requestAdmin()
                     FocusLock.lockForMinutes(ctx, mins)
                     updateStatus()
+                } else {
+                    MaterialAlertDialogBuilder(ctx)
+                        .setMessage("Durée invalide. Entre un nombre entre 1 et ${FocusLock.MAX_MINUTES} minutes (max 1 an).")
+                        .setPositiveButton("OK", null)
+                        .show()
                 }
             }
             .show()

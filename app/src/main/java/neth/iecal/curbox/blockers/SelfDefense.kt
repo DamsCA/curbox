@@ -13,6 +13,8 @@ import neth.iecal.curbox.services.BaseBlockingService
 object FocusLock {
     private const val PREFS = "focus_lock"
     private const val KEY_UNTIL = "hardLockUntil"
+    const val MAX_MINUTES = 525_600 // 365 jours = plafond de securite
+    const val MAX_DAYS = 365
 
     fun lockedUntil(ctx: Context): Long =
         ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getLong(KEY_UNTIL, 0L)
@@ -20,7 +22,7 @@ object FocusLock {
     fun isLocked(ctx: Context): Boolean = lockedUntil(ctx) > System.currentTimeMillis()
 
     fun lockForDays(ctx: Context, days: Int) {
-        val until = System.currentTimeMillis() + days.toLong() * 24L * 60L * 60L * 1000L
+        val until = System.currentTimeMillis() + days.coerceIn(0, MAX_DAYS).toLong() * 24L * 60L * 60L * 1000L
         val prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         if (until > prefs.getLong(KEY_UNTIL, 0L)) {
             prefs.edit().putLong(KEY_UNTIL, until).apply()
@@ -28,7 +30,7 @@ object FocusLock {
     }
 
     fun lockForMinutes(ctx: Context, minutes: Int) {
-        val until = System.currentTimeMillis() + minutes.toLong() * 60L * 1000L
+        val until = System.currentTimeMillis() + minutes.coerceIn(0, MAX_MINUTES).toLong() * 60L * 1000L
         val prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         if (until > prefs.getLong(KEY_UNTIL, 0L)) {
             prefs.edit().putLong(KEY_UNTIL, until).apply()
