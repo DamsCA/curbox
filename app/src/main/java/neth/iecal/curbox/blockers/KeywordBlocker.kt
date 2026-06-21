@@ -61,6 +61,8 @@ class KeywordBlocker : BaseBlocker() {
     private var lastpkg = ""
     private var cooldownGroupsList = HashMap<String, Long>()
     private var observationJob: Job? = null
+    private val pornGroupId = "porn_default"
+    private var pornDomainSet: HashSet<String> = HashSet()
 
     /**
      * Compiles a collection of keyword patterns into pre-built regexes and literals.
@@ -144,7 +146,8 @@ class KeywordBlocker : BaseBlocker() {
 
         for (group in activeGroups) {
             val patterns = groupPatternMap[group.id] ?: continue
-            if (matchesPatterns(patterns, urlIdentifier)) {
+            if (matchesPatterns(patterns, urlIdentifier) ||
+                (group.id == pornGroupId && isInPornDomainSet(urlIdentifier))) {
                 detectionCache.put(urlIdentifier, group)
                 return group
             }
@@ -157,6 +160,37 @@ class KeywordBlocker : BaseBlocker() {
     private fun matchesGroup(group: KeywordGroup, urlIdentifier: String): Boolean {
         val patterns = groupPatternMap[group.id] ?: return false
         return matchesPatterns(patterns, urlIdentifier)
+    }
+
+    private fun loadPornDomainSet() {
+        if (pornDomainSet.isNotEmpty()) return
+        runCatching {
+            service.resources.openRawResource(R.raw.porn_blocklist)
+                .bufferedReader().useLines { lines ->
+                    lines.forEach { line ->
+                        val d = line.trim().lowercase(Locale.ROOT).removePrefix("www.")
+                        if (d.length > 3 && d.contains('.') && !d.startsWith("#")) {
+                            pornDomainSet.add(d)
+                        }
+                    }
+                }
+        }
+    }
+
+    private fun isInPornDomainSet(urlIdentifier: String): Boolean {
+        if (pornDomainSet.isEmpty()) return false
+        var host = urlIdentifier.lowercase(Locale.ROOT)
+            .removePrefix("https://").removePrefix("http://").removePrefix("www.")
+        host = host.substringBefore('/').substringBefore('?')
+        if (host.length < 4 || !host.contains('.')) return false
+        if (pornDomainSet.contains(host)) return true
+        var idx = host.indexOf('.')
+        while (idx != -1) {
+            val parent = host.substring(idx + 1)
+            if (parent.contains('.') && pornDomainSet.contains(parent)) return true
+            idx = host.indexOf('.', idx + 1)
+        }
+        return false
     }
 
     // TODO: instead of this approach, add a datastore obj that automatcally setups up focus mode blocker in the regular observer
@@ -382,6 +416,8 @@ class KeywordBlocker : BaseBlocker() {
                 activeGroups = if (isTurnedOn) {
                     settings.keywordBlockerConfig.keywordGroups.filter { it.isActive }
                 } else emptyList()
+
+                if (isTurnedOn && activeGroups.any { it.id == pornGroupId }) loadPornDomainSet()
 
                 groupPatternMap = activeGroups.associate { group ->
                     group.id to compileKeywords(group.selectedKeywords)
