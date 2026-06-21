@@ -29,7 +29,8 @@ data class Settings(
                     "jacquieetmichel", "tukif", "dorcel", "mrsexe"
                 ),
                 blockingType = AppBlockingType.OnOpen,
-                isActive = true
+                isActive = true,
+                warningScreenConfig = AppBlockerWarningScreenConfig(isProceedDisabled = true)
             )
         )
     ),

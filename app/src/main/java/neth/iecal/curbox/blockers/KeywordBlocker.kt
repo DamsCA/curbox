@@ -262,10 +262,13 @@ class KeywordBlocker : BaseBlocker() {
     private fun evaluateAndBlock(entry: WebsiteStatsEntity) {
         val matchedGroup = findMatchingGroup(entry.urlIdentifier) ?: return
 
-        val cooldownEnd = cooldownGroupsList[matchedGroup.id]
-        if (cooldownEnd != null) {
-            if (cooldownEnd > System.currentTimeMillis()) return
-            else removeCooldownFrom(matchedGroup.id)
+        // OnOpen groups (porn) must NEVER be bypassable via a cooldown.
+        if (matchedGroup.blockingType != AppBlockingType.OnOpen) {
+            val cooldownEnd = cooldownGroupsList[matchedGroup.id]
+            if (cooldownEnd != null) {
+                if (cooldownEnd > System.currentTimeMillis()) return
+                else removeCooldownFrom(matchedGroup.id)
+            }
         }
 
         if (isBlocked(matchedGroup, entry.packageName)) {

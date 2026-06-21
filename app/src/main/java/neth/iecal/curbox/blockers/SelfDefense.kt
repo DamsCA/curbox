@@ -125,7 +125,9 @@ class SelfDefense {
         node.contentDescription?.let { sb.append(it).append(' ') }
         val count = node.childCount
         for (i in 0 until count) {
-            collectText(node.getChild(i), sb, depth + 1)
+            val child = node.getChild(i) ?: continue
+            collectText(child, sb, depth + 1)
+            @Suppress("DEPRECATION") child.recycle()
         }
     }
 }
