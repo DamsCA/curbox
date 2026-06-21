@@ -80,12 +80,15 @@ class SelfDefense {
         val mentionsOurServices =
             text.contains("focus protection") || text.contains("focus suivi")
 
+        // Tightened to AVOID false positives on benign Samsung screens that merely
+        // contain "Focus" + a common word like "désactiver" (One UI Focus mode, etc.).
+        // We only react to app-management / device-admin / uninstall screens for OUR app.
         val dangerousFocusPage = text.contains("focus") && (
             text.contains("désinstaller") || text.contains("uninstall") ||
-            text.contains("forcer") || text.contains("force stop") ||
-            text.contains("désactiver") || text.contains("deactivate") ||
+            text.contains("forcer l'arrêt") || text.contains("force stop") ||
             text.contains("administration de l'appareil") ||
-            text.contains("administrateur") || text.contains("device admin")
+            text.contains("administrateur de l'appareil") ||
+            text.contains("device admin")
         )
 
         if (mentionsOurServices || dangerousFocusPage) {
