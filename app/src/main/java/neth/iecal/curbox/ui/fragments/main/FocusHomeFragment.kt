@@ -141,17 +141,25 @@ class FocusHomeFragment : Fragment() {
             btnEnable.visibility = View.VISIBLE
         }
 
-        val until = FocusLock.lockedUntil(ctx)
-        if (until > System.currentTimeMillis()) {
-            val daysLeft = ((until - System.currentTimeMillis()) / (24L * 60L * 60L * 1000L) + 1L).toInt()
-            lockInfo.text = "🔒 Verrouillé encore $daysLeft jour(s)\nImpossible de désactiver ou désinstaller Focus."
+        val btnTest = v.findViewById<MaterialButton>(R.id.btn_lock_test)
+        val remaining = FocusLock.lockedUntil(ctx) - System.currentTimeMillis()
+        if (remaining > 0) {
+            val totalMin = remaining / 60000L
+            val label = when {
+                totalMin < 60L -> "${totalMin + 1} min"
+                totalMin < 60L * 24L -> "${totalMin / 60L} h ${totalMin % 60L} min"
+                else -> "${totalMin / (60L * 24L)} jour(s)"
+            }
+            lockInfo.text = "🔒 Verrouillé encore $label\nImpossible de désactiver ou désinstaller Focus."
             lockInfo.visibility = View.VISIBLE
             btn7.visibility = View.GONE
             btn30.visibility = View.GONE
+            btnTest.visibility = View.GONE
         } else {
             lockInfo.visibility = View.GONE
             btn7.visibility = View.VISIBLE
             btn30.visibility = View.VISIBLE
+            btnTest.visibility = View.VISIBLE
         }
     }
 
