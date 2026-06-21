@@ -2,6 +2,7 @@ package neth.iecal.curbox.blockers
 
 import android.content.Context
 import android.os.SystemClock
+import java.io.File
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import neth.iecal.curbox.services.BaseBlockingService
@@ -11,31 +12,36 @@ import neth.iecal.curbox.services.BaseBlockingService
  * The lock can only be extended, never shortened, until it naturally expires.
  */
 object FocusLock {
-    private const val PREFS = "focus_lock"
-    private const val KEY_UNTIL = "hardLockUntil"
     const val MAX_MINUTES = 525_600 // 365 jours = plafond de securite
     const val MAX_DAYS = 365
+    private const val FILE_NAME = "focus_lock.txt"
 
-    fun lockedUntil(ctx: Context): Long =
-        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getLong(KEY_UNTIL, 0L)
+    // Stocke le verrou dans un fichier de filesDir (partage par TOUS les processus).
+    // Les SharedPreferences sont cachees par processus et NE se synchronisent PAS entre
+    // l'UI et le service d'accessibilite (:app_blocker_service) -> le verrou serait invisible
+    // pour l'auto-defense. La lecture fichier a frais resout ca.
+    fun lockedUntil(ctx: Context): Long = runCatching {
+        val f = File(ctx.filesDir, FILE_NAME)
+        if (f.exists()) f.readText().trim().toLongOrNull() ?: 0L else 0L
+    }.getOrDefault(0L)
 
     fun isLocked(ctx: Context): Boolean = lockedUntil(ctx) > System.currentTimeMillis()
 
-    fun lockForDays(ctx: Context, days: Int) {
-        val until = System.currentTimeMillis() + days.coerceIn(0, MAX_DAYS).toLong() * 24L * 60L * 60L * 1000L
-        val prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        if (until > prefs.getLong(KEY_UNTIL, 0L)) {
-            prefs.edit().putLong(KEY_UNTIL, until).apply()
+    private fun extendTo(ctx: Context, until: Long) {
+        runCatching {
+            if (until > lockedUntil(ctx)) {
+                val tmp = File(ctx.filesDir, "$FILE_NAME.tmp")
+                tmp.writeText(until.toString())
+                tmp.renameTo(File(ctx.filesDir, FILE_NAME))
+            }
         }
     }
 
-    fun lockForMinutes(ctx: Context, minutes: Int) {
-        val until = System.currentTimeMillis() + minutes.coerceIn(0, MAX_MINUTES).toLong() * 60L * 1000L
-        val prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        if (until > prefs.getLong(KEY_UNTIL, 0L)) {
-            prefs.edit().putLong(KEY_UNTIL, until).apply()
-        }
-    }
+    fun lockForDays(ctx: Context, days: Int) =
+        extendTo(ctx, System.currentTimeMillis() + days.coerceIn(0, MAX_DAYS).toLong() * 24L * 60L * 60L * 1000L)
+
+    fun lockForMinutes(ctx: Context, minutes: Int) =
+        extendTo(ctx, System.currentTimeMillis() + minutes.coerceIn(0, MAX_MINUTES).toLong() * 60L * 1000L)
 }
 
 /**
@@ -64,12 +70,12 @@ class SelfDefense {
     fun check(event: AccessibilityEvent?) {
         val svc = service ?: return
         val ev = event ?: return
-        if (!FocusLock.isLocked(svc)) return
         val pkg = (ev.packageName?.toString() ?: return).lowercase()
         val systemUi = pkg in watchedPackages || pkg.contains("settings") ||
             pkg.contains("packageinstaller") || pkg.contains("permissioncontroller") ||
             pkg.contains("securitycenter") || pkg.contains("packagemanager")
         if (!systemUi) return
+        if (!FocusLock.isLocked(svc)) return
         if (SystemClock.uptimeMillis() - lastAction < 500) return
 
         val sb = StringBuilder()
