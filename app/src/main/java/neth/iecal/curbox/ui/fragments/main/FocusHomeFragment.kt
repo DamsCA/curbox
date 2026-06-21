@@ -10,6 +10,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import android.widget.EditText
+import android.text.InputType
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.google.android.material.button.MaterialButton
@@ -77,14 +79,23 @@ class FocusHomeFragment : Fragment() {
 
     private fun confirmTestLock() {
         val ctx = context ?: return
+        val input = EditText(ctx).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER
+            hint = "Minutes (ex: 5)"
+            setPadding(60, 40, 60, 20)
+        }
         MaterialAlertDialogBuilder(ctx)
-            .setTitle("Tester le verrou (1 heure)")
-            .setMessage("Verrouille Focus pendant 1 heure pour vérifier que la désactivation et la désinstallation sont bien bloquées. Dure 1h, non annulable.")
+            .setTitle("Durée du verrou")
+            .setMessage("Entre la durée en minutes. Impossible à annuler avant la fin.\n5 = test rapide, 60 = 1 heure, 1440 = 1 jour, 10080 = 7 jours.")
+            .setView(input)
             .setNegativeButton("Annuler", null)
-            .setPositiveButton("Tester") { _, _ ->
-                requestAdmin()
-                FocusLock.lockForMinutes(ctx, 60)
-                updateStatus()
+            .setPositiveButton("Verrouiller") { _, _ ->
+                val mins = input.text.toString().trim().toIntOrNull()
+                if (mins != null && mins > 0) {
+                    requestAdmin()
+                    FocusLock.lockForMinutes(ctx, mins)
+                    updateStatus()
+                }
             }
             .show()
     }
