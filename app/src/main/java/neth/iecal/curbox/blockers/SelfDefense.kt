@@ -71,6 +71,18 @@ class SelfDefense {
         val svc = service ?: return
         val ev = event ?: return
         val pkg = (ev.packageName?.toString() ?: return).lowercase()
+
+        // Verrou actif: empeche d'ouvrir l'app-bloqueur gardee (Stay Focused) pour qu'on ne
+        // puisse pas la desactiver. Sa desinstallation est deja couverte (son nom contient "focus").
+        if (pkg == "com.stayfocused") {
+            if (FocusLock.isLocked(svc) && SystemClock.uptimeMillis() - lastAction >= 500) {
+                lastAction = SystemClock.uptimeMillis()
+                svc.pressBack()
+                svc.pressHome()
+            }
+            return
+        }
+
         val systemUi = pkg in watchedPackages || pkg.contains("settings") ||
             pkg.contains("packageinstaller") || pkg.contains("permissioncontroller") ||
             pkg.contains("securitycenter") || pkg.contains("packagemanager")
