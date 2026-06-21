@@ -160,6 +160,12 @@ class FocusHomeFragment : Fragment() {
             btn7.visibility = View.VISIBLE
             btn30.visibility = View.VISIBLE
             btnTest.visibility = View.VISIBLE
+            // Lock expired: auto-remove device admin so the app can be uninstalled directly.
+            runCatching {
+                val admin = ComponentName(ctx, AdminReceiver::class.java)
+                val dpm = ctx.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+                if (dpm.isAdminActive(admin)) dpm.removeActiveAdmin(admin)
+            }
         }
     }
 
