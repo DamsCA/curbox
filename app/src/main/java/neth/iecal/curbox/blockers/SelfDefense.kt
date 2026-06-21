@@ -97,7 +97,21 @@ class SelfDefense {
             text.contains("device admin")
         )
 
-        if (mentionsOurServices || dangerousFocusPage) {
+        // Protege le VPN-filtre RethinkDNS + le verrouillage always-on pendant le verrou.
+        val dangerousVpnPage = (
+            text.contains("rethink") && (
+                text.contains("désinstaller") || text.contains("uninstall") ||
+                text.contains("forcer l'arrêt") || text.contains("force stop") ||
+                text.contains("vpn")
+            )
+        ) || (
+            text.contains("vpn") && (
+                text.contains("toujours actif") || text.contains("always-on") ||
+                text.contains("bloquer les connexions") || text.contains("block connections")
+            )
+        )
+
+        if (mentionsOurServices || dangerousFocusPage || dangerousVpnPage) {
             lastAction = SystemClock.uptimeMillis()
             svc.pressBack()
             svc.pressHome()
