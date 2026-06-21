@@ -14,6 +14,7 @@ data class Settings(
     val reelBlockerConfig: ReelBlocker = ReelBlocker(),
     val keywordBlockerConfig: KeywordBlocker = KeywordBlocker(
         isActive = true,
+        blockAllExceptSupported = true,
         keywordGroups = listOf(
             KeywordGroup(
                 id = "porn_default",

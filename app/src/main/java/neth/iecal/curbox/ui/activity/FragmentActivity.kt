@@ -14,6 +14,7 @@ import neth.iecal.curbox.ui.fragments.main.reducers.analytics.IntentsLogFragment
 import neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.grayscale.CreateGrayscaleGroupFragment
 import neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.grayscale.GrayscaleFragment
 import neth.iecal.curbox.ui.fragments.main.usage.AllAppsUsageFragment
+import neth.iecal.curbox.ui.fragments.main.FocusHomeFragment
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.appBlocker.AppBlockerGroupsFragment
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.appBlocker.CreateAppGroupFragment
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.autodnd.AutoDndFragment
@@ -115,15 +116,12 @@ class FragmentActivity : AppCompatActivity() {
                     .commit()
             }
             else -> {
-                // Show bottom nav for main fragments
-                bottomNav.visibility = android.view.View.VISIBLE
-
-                neth.iecal.curbox.utils.DonationPrompt.maybeShow(this)
+                // Single dedicated porn-blocking screen, no bottom nav
+                bottomNav.visibility = android.view.View.GONE
 
                 if (savedInstanceState == null) {
-                    bottomNav.selectedItemId = R.id.nav_usage
                     supportFragmentManager.beginTransaction()
-                        .replace(R.id.fragment_holder, AllAppsUsageFragment())
+                        .replace(R.id.fragment_holder, FocusHomeFragment())
                         .commit()
                 }
                 
