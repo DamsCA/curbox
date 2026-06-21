@@ -257,8 +257,11 @@ class KeywordBlocker : BaseBlocker() {
     }
 
     private fun isBlocked(group: KeywordGroup, packageName: String): Boolean =
-        if (group.blockingType == AppBlockingType.Timed) isTimedBlockActive(group)
-        else isUsageLimitExceeded(group, packageName)
+        when (group.blockingType) {
+            AppBlockingType.OnOpen -> true
+            AppBlockingType.Timed -> isTimedBlockActive(group)
+            else -> isUsageLimitExceeded(group, packageName)
+        }
 
     private fun isTimedBlockActive(group: KeywordGroup): Boolean {
         val config = Gson().fromJson(group.setting, AppTimeConfig::class.java) ?: return false

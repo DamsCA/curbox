@@ -29,4 +29,14 @@ val URL_BAR_ID_LIST = mapOf(
     "com.opera.browser" to BrowserUrlBarInfo(
         displayUrlBarId = "com.opera.browser:id/url_field",
     ),
+
+    "com.microsoft.emmx" to BrowserUrlBarInfo(
+        displayUrlBarId = "com.microsoft.emmx:id/url_bar",
+    ),
+    "com.sec.android.app.sbrowser" to BrowserUrlBarInfo(
+        displayUrlBarId = "com.sec.android.app.sbrowser:id/location_bar_edit_text",
+    ),
+    "com.microsoft.bing" to BrowserUrlBarInfo(
+        displayUrlBarId = "com.microsoft.bing:id/url_bar",
+    ),
 )
