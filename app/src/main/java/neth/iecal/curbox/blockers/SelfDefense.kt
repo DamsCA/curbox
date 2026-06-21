@@ -63,30 +63,48 @@ class SelfDefense {
         val svc = service ?: return
         val ev = event ?: return
         if (!FocusLock.isLocked(svc)) return
-        val pkg = ev.packageName?.toString() ?: return
-        if (pkg !in watchedPackages) return
-        if (SystemClock.uptimeMillis() - lastAction < 700) return
+        val pkg = (ev.packageName?.toString() ?: return).lowercase()
+        val systemUi = pkg in watchedPackages || pkg.contains("settings") ||
+            pkg.contains("packageinstaller") || pkg.contains("permissioncontroller") ||
+            pkg.contains("securitycenter") || pkg.contains("packagemanager")
+        if (!systemUi) return
+        if (SystemClock.uptimeMillis() - lastAction < 500) return
 
-        val root = svc.rootInActiveWindow ?: return
         val sb = StringBuilder()
-        collectText(root, sb, 0)
+        collectAllWindowsText(svc, sb)
         val text = sb.toString().lowercase()
+        if (text.isEmpty()) return
 
         val mentionsOurServices =
             text.contains("focus protection") || text.contains("focus suivi")
 
-        val dangerousAppPage = text.contains("focus") && (
+        val dangerousFocusPage = text.contains("focus") && (
             text.contains("désinstaller") || text.contains("uninstall") ||
-            text.contains("forcer l'arrêt") || text.contains("force stop") ||
+            text.contains("forcer") || text.contains("force stop") ||
             text.contains("désactiver") || text.contains("deactivate") ||
-            text.contains("turn off") ||
+            text.contains("administration de l'appareil") ||
             text.contains("administrateur") || text.contains("device admin")
         )
 
-        if (mentionsOurServices || dangerousAppPage) {
+        if (mentionsOurServices || dangerousFocusPage) {
             lastAction = SystemClock.uptimeMillis()
             svc.pressBack()
             svc.pressHome()
+        }
+    }
+
+    private fun collectAllWindowsText(svc: BaseBlockingService, sb: StringBuilder) {
+        runCatching {
+            val windows = svc.windows
+            if (!windows.isNullOrEmpty()) {
+                for (w in windows) {
+                    collectText(w.root, sb, 0)
+                    if (sb.length > 9000) return
+                }
+            }
+        }
+        if (sb.isEmpty()) {
+            runCatching { collectText(svc.rootInActiveWindow, sb, 0) }
         }
     }
 
