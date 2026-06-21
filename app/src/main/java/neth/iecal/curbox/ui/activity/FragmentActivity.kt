@@ -41,7 +41,7 @@ class FragmentActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         val sharedPreferences = getSharedPreferences("AppPreferences", android.content.Context.MODE_PRIVATE)
         val isFirstLaunchComplete = sharedPreferences.getBoolean("isFirstLaunchComplete", false)
-        val selectedFragment = intent.getStringExtra("fragment") ?: if (!isFirstLaunchComplete) OnboardingFragment.FRAGMENT_ID else AllAppsUsageFragment.FRAGMENT_ID
+        val selectedFragment = intent.getStringExtra("fragment") ?: AllAppsUsageFragment.FRAGMENT_ID
 
         if (selectedFragment == OnboardingFragment.FRAGMENT_ID) {
             setTheme(R.style.Theme_Curbox_Onboarding)
@@ -51,7 +51,7 @@ class FragmentActivity : AppCompatActivity() {
         enableEdgeToEdge()
         setContentView(R.layout.activity_fragment)
 
-        maybeShowTermsConsent()
+        // terms consent skipped
 
         val bottomNav = findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottom_nav)
 

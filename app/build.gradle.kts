@@ -48,6 +48,16 @@ android {
         }
     }
 
+    signingConfigs {
+        create("focus") {
+            storeFile = file("focus.keystore")
+            storePassword = "focus123"
+            keyAlias = "focus"
+            keyPassword = "focus123"
+            storeType = "PKCS12"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -74,6 +84,7 @@ android {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
             resValue("string", "app_name", "Focus")
+            signingConfig = signingConfigs.getByName("focus")
         }
     }
     compileOptions {
