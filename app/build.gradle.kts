@@ -23,7 +23,7 @@ android {
         versionCode = 1
         versionName = "1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        resValue("string", "app_name", "Curbox")
+        resValue("string", "app_name", "Focus")
     }
 
     productFlavors {
@@ -73,7 +73,7 @@ android {
         debug {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
-            resValue("string", "app_name", "Debug Curbox")
+            resValue("string", "app_name", "Focus")
         }
     }
     compileOptions {
