@@ -148,6 +148,14 @@
                         android:layout_weight="1"
                         android:text="Verrouiller 30 jours" />
                 </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_lock_test"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Tester le verrou (1 heure)" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

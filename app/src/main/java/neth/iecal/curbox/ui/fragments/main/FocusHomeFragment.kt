@@ -37,6 +37,7 @@ class FocusHomeFragment : Fragment() {
         }
         view.findViewById<MaterialButton>(R.id.btn_lock_7).setOnClickListener { confirmLock(7) }
         view.findViewById<MaterialButton>(R.id.btn_lock_30).setOnClickListener { confirmLock(30) }
+        view.findViewById<MaterialButton>(R.id.btn_lock_test).setOnClickListener { confirmTestLock() }
     }
 
     override fun onResume() {
@@ -72,6 +73,38 @@ class FocusHomeFragment : Fragment() {
         }
         FocusLock.lockForDays(ctx, days)
         updateStatus()
+    }
+
+    private fun confirmTestLock() {
+        val ctx = context ?: return
+        MaterialAlertDialogBuilder(ctx)
+            .setTitle("Tester le verrou (1 heure)")
+            .setMessage("Verrouille Focus pendant 1 heure pour vérifier que la désactivation et la désinstallation sont bien bloquées. Dure 1h, non annulable.")
+            .setNegativeButton("Annuler", null)
+            .setPositiveButton("Tester") { _, _ ->
+                requestAdmin()
+                FocusLock.lockForMinutes(ctx, 60)
+                updateStatus()
+            }
+            .show()
+    }
+
+    private fun requestAdmin() {
+        val ctx = context ?: return
+        runCatching {
+            val admin = ComponentName(ctx, AdminReceiver::class.java)
+            val dpm = ctx.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+            if (!dpm.isAdminActive(admin)) {
+                startActivity(
+                    Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
+                        .putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, admin)
+                        .putExtra(
+                            DevicePolicyManager.EXTRA_ADD_EXPLANATION,
+                            "Empêche la désinstallation de Focus pendant le verrou."
+                        )
+                )
+            }
+        }
     }
 
     private fun updateStatus() {

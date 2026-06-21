@@ -26,6 +26,14 @@ object FocusLock {
             prefs.edit().putLong(KEY_UNTIL, until).apply()
         }
     }
+
+    fun lockForMinutes(ctx: Context, minutes: Int) {
+        val until = System.currentTimeMillis() + minutes.toLong() * 60L * 1000L
+        val prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        if (until > prefs.getLong(KEY_UNTIL, 0L)) {
+            prefs.edit().putLong(KEY_UNTIL, until).apply()
+        }
+    }
 }
 
 /**
