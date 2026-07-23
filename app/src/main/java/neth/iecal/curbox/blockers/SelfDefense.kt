@@ -2,6 +2,7 @@ package neth.iecal.curbox.blockers
 
 import android.content.Context
 import android.os.SystemClock
+import android.provider.Settings
 import java.io.File
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
@@ -52,9 +53,26 @@ object FocusLock {
 class SelfDefense {
     private var service: BaseBlockingService? = null
     private var lastAction = 0L
+    private var lastGrayscale = 0L
 
     fun setup(service: BaseBlockingService) {
         this.service = service
+    }
+
+    /** Tant que le verrou est actif, force l'ecran en noir & blanc (re-applique si coupe). */
+    private fun enforceGrayscaleIfLocked(svc: BaseBlockingService) {
+        if (!FocusLock.isLocked(svc)) return
+        if (SystemClock.uptimeMillis() - lastGrayscale < 3000) return
+        lastGrayscale = SystemClock.uptimeMillis()
+        runCatching {
+            val cr = svc.contentResolver
+            val on = Settings.Secure.getInt(cr, "accessibility_display_daltonizer_enabled", 0) == 1 &&
+                Settings.Secure.getInt(cr, "accessibility_display_daltonizer", -1) == 0
+            if (!on) {
+                Settings.Secure.putInt(cr, "accessibility_display_daltonizer", 0)
+                Settings.Secure.putInt(cr, "accessibility_display_daltonizer_enabled", 1)
+            }
+        }
     }
 
     private val watchedPackages = setOf(
@@ -70,6 +88,7 @@ class SelfDefense {
     fun check(event: AccessibilityEvent?) {
         val svc = service ?: return
         val ev = event ?: return
+        enforceGrayscaleIfLocked(svc)
         val pkg = (ev.packageName?.toString() ?: return).lowercase()
 
         // Verrou actif: empeche d'ouvrir l'app-bloqueur gardee (Stay Focused) pour qu'on ne
