@@ -63,6 +63,8 @@ class KeywordBlocker : BaseBlocker() {
     private var observationJob: Job? = null
     private val pornGroupId = "porn_default"
     private var pornDomainSet: HashSet<String> = HashSet()
+    // Sites/termes bannis en plus (bloque toute URL qui contient l'une de ces sous-chaines).
+    private val hardBlockedSubstrings = listOf("fs25")
 
     /**
      * Compiles a collection of keyword patterns into pre-built regexes and literals.
@@ -178,6 +180,8 @@ class KeywordBlocker : BaseBlocker() {
     }
 
     private fun isInPornDomainSet(urlIdentifier: String): Boolean {
+        val lowUrl = urlIdentifier.lowercase(Locale.ROOT)
+        if (hardBlockedSubstrings.any { lowUrl.contains(it) }) return true
         if (pornDomainSet.isEmpty()) return false
         var host = urlIdentifier.lowercase(Locale.ROOT)
             .removePrefix("https://").removePrefix("http://").removePrefix("www.")
