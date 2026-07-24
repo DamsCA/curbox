@@ -64,7 +64,9 @@ class KeywordBlocker : BaseBlocker() {
     private val pornGroupId = "porn_default"
     private var pornDomainSet: HashSet<String> = HashSet()
     // Sites/termes bannis en plus (bloque toute URL qui contient l'une de ces sous-chaines).
-    private val hardBlockedSubstrings = listOf("fs25")
+    // French Stream change de domaine sans cesse (ARCOM) -> on cible le nom de marque,
+    // ce qui attrape toutes les extensions actuelles ET futures (.one, .bio, .net, etc.).
+    private val hardBlockedSubstrings = listOf("fs25", "fstream", "french-stream", "frenchstream")
 
     /**
      * Compiles a collection of keyword patterns into pre-built regexes and literals.
