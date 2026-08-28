@@ -26,18 +26,28 @@ class SearchTermBlocker {
     /** Duree pendant laquelle l'app reste inaccessible apres une detection. */
     private val blockWindowMs = 20_000L
 
-    private val watchedPackages = setOf(
-        "com.zhiliaoapp.musically",      // TikTok
-        "com.ss.android.ugc.trill",      // TikTok (variante)
-        "com.instagram.android",         // Instagram
-        "com.instagram.barcelona",       // Threads
-        "com.google.android.youtube",
-        "com.snapchat.android",
-        "com.twitter.android",
-        "com.x.android",
-        "com.reddit.frontpage",
-        "com.pinterest",
-        "com.google.android.googlequicksearchbox"
+    /**
+     * On surveille TOUTES les applications : le nom doit etre banni de l'ecran,
+     * quelle que soit l'app. Ces exclusions ne sont pas du confort, elles evitent
+     * que le blocage se retourne contre l'utilisateur :
+     *  - notre propre app et Stay Focused AFFICHENT la liste des mots bannis,
+     *    elles s'auto-ejecteraient et deviendraient impossibles a configurer ;
+     *  - le launcher est la destination de l'ejection : le bloquer = boucle infinie ;
+     *  - le clavier reaffiche la saisie en suggestion -> declenchement permanent ;
+     *  - les reglages doivent rester accessibles pour ne pas enfermer l'utilisateur.
+     */
+    private val excludedPackages = setOf(
+        "neth.iecal.curbox",
+        "neth.iecal.curbox.debug",
+        "com.stayfocused",
+        "com.android.systemui",
+        "com.sec.android.app.launcher",
+        "com.google.android.apps.nexuslauncher",
+        "com.samsung.android.honeyboard",
+        "com.google.android.inputmethod.latin",
+        "com.touchtype.swiftkey",
+        "com.android.settings",
+        "com.samsung.android.settings"
     )
 
     /**
@@ -73,7 +83,7 @@ class SearchTermBlocker {
         val svc = service ?: return
         val ev = event ?: return
         val pkg = ev.packageName?.toString() ?: return
-        if (pkg !in watchedPackages) return
+        if (pkg in excludedPackages) return
 
         val now = SystemClock.uptimeMillis()
 
@@ -93,7 +103,7 @@ class SearchTermBlocker {
             // dans l'historique. Aucun evenement de frappe n'est emis dans ces cas.
             AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED,
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
-                if (now - lastScan < 500) return
+                if (now - lastScan < 800) return
                 lastScan = now
                 if (screenContainsBanned(svc)) trigger(svc, now)
             }
@@ -114,7 +124,7 @@ class SearchTermBlocker {
     }
 
     private fun collect(node: AccessibilityNodeInfo?, sb: StringBuilder, depth: Int) {
-        if (node == null || depth > 30 || sb.length > 6000) return
+        if (node == null || depth > 25 || sb.length > 4000) return
         node.text?.let { sb.append(it).append(' ') }
         node.contentDescription?.let { sb.append(it).append(' ') }
         for (i in 0 until node.childCount) {
