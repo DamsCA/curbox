@@ -66,7 +66,12 @@ class KeywordBlocker : BaseBlocker() {
     // Sites/termes bannis en plus (bloque toute URL qui contient l'une de ces sous-chaines).
     // French Stream change de domaine sans cesse (ARCOM) -> on cible le nom de marque,
     // ce qui attrape toutes les extensions actuelles ET futures (.one, .bio, .net, etc.).
-    private val hardBlockedSubstrings = listOf("fs25", "fstream", "french-stream", "frenchstream")
+    private val hardBlockedSubstrings = listOf(
+        "fs25", "fstream", "french-stream", "frenchstream",
+        "fluffington", "flufington", "fufflyngton",
+        "daisymarie", "daisy-marie",
+        "bouncingbunny", "bouncing-bunny", "bouncing_bunny"
+    )
 
     /**
      * Compiles a collection of keyword patterns into pre-built regexes and literals.
