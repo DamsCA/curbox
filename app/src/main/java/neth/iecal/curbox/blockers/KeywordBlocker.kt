@@ -68,9 +68,9 @@ class KeywordBlocker : BaseBlocker() {
     // ce qui attrape toutes les extensions actuelles ET futures (.one, .bio, .net, etc.).
     private val hardBlockedSubstrings = listOf(
         "fs25", "fstream", "french-stream", "frenchstream",
-        "fluffington", "flufington", "fufflyngton",
-        "daisymarie", "daisy-marie",
-        "bouncingbunny", "bouncing-bunny", "bouncing_bunny"
+        "fluffingt", "flufingt", "fufflyng", "melodyfluff",
+        "daisymar", "daisy-mar", "daisy_mar",
+        "bouncingbun", "bouncing-bun", "bouncing_bun", "bouncebun"
     )
 
     /**
