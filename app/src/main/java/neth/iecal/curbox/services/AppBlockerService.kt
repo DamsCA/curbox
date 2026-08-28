@@ -17,6 +17,7 @@ import neth.iecal.curbox.blockers.AppBlocker
 import neth.iecal.curbox.blockers.FocusModeBlocker
 import neth.iecal.curbox.blockers.KeywordBlocker
 import neth.iecal.curbox.blockers.ReelBlocker
+import neth.iecal.curbox.blockers.SearchTermBlocker
 import neth.iecal.curbox.blockers.SelfDefense
 import neth.iecal.curbox.blockers.uihider.NodePicker
 import neth.iecal.curbox.blockers.uihider.UiHider
@@ -32,6 +33,7 @@ class AppBlockerService : BaseBlockingService() {
     private val uiHider = UiHider()
     private val nodePicker = NodePicker()
     private val selfDefense = SelfDefense()
+    private val searchTermBlocker = SearchTermBlocker()
 
     private var grayScaleFilter = GrayScaleFilter()
 
@@ -65,6 +67,7 @@ class AppBlockerService : BaseBlockingService() {
 
         try {
             selfDefense.check(event)
+            searchTermBlocker.check(event)
             appBlocker.doAppBlockerCheck(event)
             grayScaleFilter.doGrayscaleCheck(event)
             focusModeBlocker.doFocusModeCheck(event)
@@ -116,6 +119,7 @@ class AppBlockerService : BaseBlockingService() {
         uiHider.setupBlocker(this)
         nodePicker.setupBlocker(this)
         selfDefense.setup(this)
+        searchTermBlocker.setup(this)
         grayScaleFilter.setup(this)
 
         focusModeBlocker.setupReceivers()
