@@ -101,25 +101,25 @@ class SearchTermBlocker {
     }
 
     /**
-     * Ne lit QUE les champs de saisie (barre de recherche), pas tout l'ecran.
-     * Lire tout l'ecran declenchait sur n'importe quelle mention du terme (description
-     * d'une video, commentaire, suggestion) et rendait l'app inutilisable en boucle.
+     * Lit TOUT le texte de la fenetre active : barre de recherche, mais aussi titres,
+     * descriptions, commentaires, suggestions et noms de comptes. Choix assume par
+     * l'utilisateur : le nom est banni de l'appareil, pas seulement de ses recherches.
+     * Consequence : une simple mention a l'ecran ferme l'app.
      */
     private fun screenContainsBanned(svc: BaseBlockingService): Boolean {
         val root = runCatching { svc.rootInActiveWindow }.getOrNull() ?: return false
         val sb = StringBuilder()
-        runCatching { collectEditableText(root, sb, 0) }
+        runCatching { collect(root, sb, 0) }
         return sb.isNotEmpty() && containsBanned(sb.toString())
     }
 
-    private fun collectEditableText(node: AccessibilityNodeInfo?, sb: StringBuilder, depth: Int) {
-        if (node == null || depth > 30 || sb.length > 2000) return
-        if (node.isEditable) {
-            node.text?.let { sb.append(it).append(' ') }
-        }
+    private fun collect(node: AccessibilityNodeInfo?, sb: StringBuilder, depth: Int) {
+        if (node == null || depth > 30 || sb.length > 6000) return
+        node.text?.let { sb.append(it).append(' ') }
+        node.contentDescription?.let { sb.append(it).append(' ') }
         for (i in 0 until node.childCount) {
             val child = node.getChild(i) ?: continue
-            collectEditableText(child, sb, depth + 1)
+            collect(child, sb, depth + 1)
             @Suppress("DEPRECATION") child.recycle()
         }
     }
