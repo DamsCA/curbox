@@ -23,8 +23,9 @@ class SearchTermBlocker {
     private var lastScan = 0L
     private var blockedUntil = 0L
 
-    /** Duree pendant laquelle l'app reste inaccessible apres une detection. */
-    private val blockWindowMs = 20_000L
+    /** Court delai anti-rebond seulement : le champ est vide a la detection, donc
+     *  rien n'empeche de revenir dans l'app juste apres. */
+    private val blockWindowMs = 3_000L
 
     /**
      * On surveille TOUTES les applications : le nom doit etre banni de l'ecran,
