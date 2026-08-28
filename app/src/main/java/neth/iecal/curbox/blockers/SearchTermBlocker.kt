@@ -57,19 +57,17 @@ class SearchTermBlocker {
      * saisie partielle soit prise aussi, et on couvre les fautes de frappe courantes.
      */
     private val blockedTerms = listOf(
-        // Fragments COURTS : ils declenchent avant que le nom complet soit tape,
-        // sinon des suggestions s'affichent pendant la frappe. Longueur choisie pour
-        // rester specifique : "daisy" ou "bouncing" seuls bloqueraient des usages
-        // legitimes (la fleur, un ballon qui rebondit).
-        "fluffingt",
-        "flufingt",
-        "fufflyng",
-        "melodyfluff",
-        "daisymar",
-        "bouncingbun",
-        "bouncebun",
+        // Prenoms et noms SEPARES, choix assume par l'utilisateur : le blocage doit
+        // tomber des les premieres lettres, avant que des suggestions s'affichent.
+        // Cout accepte : "marie" attrape aussi "se marier" et le prenom Marie.
+        "melody", "melodie",
+        "fluffing", "fluffingt", "flufingt", "fufflyng", "fluffington",
+        "daisy",
+        "marie",
+        "bouncing",
+        "bunny",
         // formes completes (redondantes, gardees par securite)
-        "fluffington",
+        "melodyfluffington",
         "daisymarie",
         "bouncingbunny"
     )
