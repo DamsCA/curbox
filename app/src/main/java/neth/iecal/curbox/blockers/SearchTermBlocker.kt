@@ -1,21 +1,30 @@
 package neth.iecal.curbox.blockers
 
+import android.os.Bundle
 import android.os.SystemClock
 import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityNodeInfo
 import neth.iecal.curbox.services.BaseBlockingService
 import java.util.Locale
 
 /**
- * Bloque des termes de recherche tapes A L'INTERIEUR des applications.
+ * Bloque des termes bannis A L'INTERIEUR des applications (TikTok, Instagram...).
  *
- * KeywordBlocker ne voit que les navigateurs (via la barre d'URL). Il est donc aveugle
- * a une recherche faite dans TikTok ou Instagram. Ici on lit le texte au moment ou il
- * est saisi, ce qui ne depend d'aucun identifiant interne de ces apps et survit donc
- * a leurs mises a jour.
+ * KeywordBlocker ne lit que la barre d'URL des navigateurs : il est aveugle a une
+ * recherche faite dans une app. Ce module couvre quatre chemins d'acces :
+ *   1. le terme est TAPE          -> TYPE_VIEW_TEXT_CHANGED
+ *   2. le terme est RESTAURE/COLLE/CLIQUE dans l'historique -> scan de l'ecran
+ *   3. l'app est ROUVERTE juste apres -> fenetre de blocage persistante
+ *   4. le champ garde le terme    -> le champ est vide avant l'ejection
  */
 class SearchTermBlocker {
     private var service: BaseBlockingService? = null
     private var lastAction = 0L
+    private var lastScan = 0L
+    private var blockedUntil = 0L
+
+    /** Duree pendant laquelle l'app reste inaccessible apres une detection. */
+    private val blockWindowMs = 45_000L
 
     private val watchedPackages = setOf(
         "com.zhiliaoapp.musically",      // TikTok
@@ -33,14 +42,18 @@ class SearchTermBlocker {
 
     /**
      * Termes bannis, deja normalises : minuscules, sans espace ni ponctuation.
-     * La normalisation de la saisie fait que "Daisy Marie", "daisy_marie",
-     * "daisy.marie" et "@daisymarie" tombent tous sur "daisymarie".
+     * On vise le fragment le plus distinctif (le nom de famille suffit), pour qu'une
+     * saisie partielle soit prise aussi, et on couvre les fautes de frappe courantes.
      */
     private val blockedTerms = listOf(
-        "melodyfufflyngton",
+        "fluffington",
+        "flufington",
+        "fluffigton",
         "fufflyngton",
+        "fuflyngton",
         "daisymarie",
-        "bouncingbunny"
+        "bouncingbunny",
+        "bouncebunny"
     )
 
     fun setup(service: BaseBlockingService) {
@@ -50,26 +63,100 @@ class SearchTermBlocker {
     private fun normalize(text: String): String =
         text.lowercase(Locale.ROOT).filter { it.isLetterOrDigit() }
 
+    private fun containsBanned(text: String): Boolean {
+        val n = normalize(text)
+        if (n.length < 4) return false
+        return blockedTerms.any { n.contains(it) }
+    }
+
     fun check(event: AccessibilityEvent?) {
         val svc = service ?: return
         val ev = event ?: return
-
         val pkg = ev.packageName?.toString() ?: return
         if (pkg !in watchedPackages) return
 
-        if (ev.eventType != AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED) return
+        val now = SystemClock.uptimeMillis()
 
-        val typed = runCatching { ev.text?.joinToString(" ") }.getOrNull() ?: return
-        if (typed.isEmpty()) return
-
-        val normalized = normalize(typed)
-        if (normalized.length < 4) return
-
-        if (blockedTerms.any { normalized.contains(it) }) {
-            if (SystemClock.uptimeMillis() - lastAction < 800) return
-            lastAction = SystemClock.uptimeMillis()
-            svc.pressBack()
-            svc.pressHome()
+        // (3) L'app a ete rouverte pendant la fenetre de blocage : on ressort.
+        if (now < blockedUntil) {
+            eject(svc, now)
+            return
         }
+
+        when (ev.eventType) {
+            // (1) Terme tape au clavier : le texte est dans l'evenement, aucun scan requis.
+            AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED -> {
+                val typed = runCatching { ev.text?.joinToString(" ") }.getOrNull() ?: return
+                if (containsBanned(typed)) trigger(svc, now)
+            }
+            // (2) Terme deja affiche : restaure a l'ouverture, colle, ou choisi
+            // dans l'historique. Aucun evenement de frappe n'est emis dans ces cas.
+            AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED,
+            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
+                if (now - lastScan < 500) return
+                lastScan = now
+                if (screenContainsBanned(svc)) trigger(svc, now)
+            }
+        }
+    }
+
+    /** Lit le texte de la fenetre active. Borne en profondeur et en taille (perf). */
+    private fun screenContainsBanned(svc: BaseBlockingService): Boolean {
+        val root = runCatching { svc.rootInActiveWindow }.getOrNull() ?: return false
+        val sb = StringBuilder()
+        runCatching { collect(root, sb, 0) }
+        return sb.isNotEmpty() && containsBanned(sb.toString())
+    }
+
+    private fun collect(node: AccessibilityNodeInfo?, sb: StringBuilder, depth: Int) {
+        if (node == null || depth > 30 || sb.length > 6000) return
+        node.text?.let { sb.append(it).append(' ') }
+        node.contentDescription?.let { sb.append(it).append(' ') }
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            collect(child, sb, depth + 1)
+            @Suppress("DEPRECATION") child.recycle()
+        }
+    }
+
+    private fun trigger(svc: BaseBlockingService, now: Long) {
+        blockedUntil = now + blockWindowMs
+        clearSearchFields(svc)   // (4) sinon le terme revient a la prochaine ouverture
+        eject(svc, now)
+    }
+
+    /** Vide les champs de saisie contenant un terme banni, pour ne pas le laisser en place. */
+    private fun clearSearchFields(svc: BaseBlockingService) {
+        runCatching {
+            val root = svc.rootInActiveWindow ?: return
+            clearEditable(root, 0)
+        }
+    }
+
+    private fun clearEditable(node: AccessibilityNodeInfo?, depth: Int) {
+        if (node == null || depth > 30) return
+        if (node.isEditable) {
+            val current = node.text?.toString() ?: ""
+            if (current.isNotEmpty() && containsBanned(current)) {
+                val args = Bundle().apply {
+                    putCharSequence(
+                        AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, ""
+                    )
+                }
+                runCatching { node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args) }
+            }
+        }
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            clearEditable(child, depth + 1)
+            @Suppress("DEPRECATION") child.recycle()
+        }
+    }
+
+    private fun eject(svc: BaseBlockingService, now: Long) {
+        if (now - lastAction < 700) return
+        lastAction = now
+        svc.pressBack()
+        svc.pressHome()
     }
 }
