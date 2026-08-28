@@ -24,7 +24,7 @@ class SearchTermBlocker {
     private var blockedUntil = 0L
 
     /** Duree pendant laquelle l'app reste inaccessible apres une detection. */
-    private val blockWindowMs = 45_000L
+    private val blockWindowMs = 20_000L
 
     private val watchedPackages = setOf(
         "com.zhiliaoapp.musically",      // TikTok
@@ -100,21 +100,26 @@ class SearchTermBlocker {
         }
     }
 
-    /** Lit le texte de la fenetre active. Borne en profondeur et en taille (perf). */
+    /**
+     * Ne lit QUE les champs de saisie (barre de recherche), pas tout l'ecran.
+     * Lire tout l'ecran declenchait sur n'importe quelle mention du terme (description
+     * d'une video, commentaire, suggestion) et rendait l'app inutilisable en boucle.
+     */
     private fun screenContainsBanned(svc: BaseBlockingService): Boolean {
         val root = runCatching { svc.rootInActiveWindow }.getOrNull() ?: return false
         val sb = StringBuilder()
-        runCatching { collect(root, sb, 0) }
+        runCatching { collectEditableText(root, sb, 0) }
         return sb.isNotEmpty() && containsBanned(sb.toString())
     }
 
-    private fun collect(node: AccessibilityNodeInfo?, sb: StringBuilder, depth: Int) {
-        if (node == null || depth > 30 || sb.length > 6000) return
-        node.text?.let { sb.append(it).append(' ') }
-        node.contentDescription?.let { sb.append(it).append(' ') }
+    private fun collectEditableText(node: AccessibilityNodeInfo?, sb: StringBuilder, depth: Int) {
+        if (node == null || depth > 30 || sb.length > 2000) return
+        if (node.isEditable) {
+            node.text?.let { sb.append(it).append(' ') }
+        }
         for (i in 0 until node.childCount) {
             val child = node.getChild(i) ?: continue
-            collect(child, sb, depth + 1)
+            collectEditableText(child, sb, depth + 1)
             @Suppress("DEPRECATION") child.recycle()
         }
     }
