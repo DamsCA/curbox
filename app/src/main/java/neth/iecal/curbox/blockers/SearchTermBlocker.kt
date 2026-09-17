@@ -59,11 +59,12 @@ class SearchTermBlocker {
     private val blockedTerms = listOf(
         // Prenoms et noms SEPARES, choix assume par l'utilisateur : le blocage doit
         // tomber des les premieres lettres, avant que des suggestions s'affichent.
-        // Cout accepte : "marie" attrape aussi "se marier" et le prenom Marie.
+        // "marie" seul a ete RETIRE le 2026-09-17 : prenom trop commun, il fermait les apps
+        // en permanence. Remplace par "daisymar", qui coupe des "daisy mar" sans le prenom.
         "melody", "melodie",
         "fluffing", "fluffingt", "flufingt", "fufflyng", "fluffington",
         "daisy",
-        "marie",
+        "daisymar",
         "bouncing",
         "bunny",
         // formes completes (redondantes, gardees par securite)

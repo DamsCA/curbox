@@ -69,7 +69,7 @@ class KeywordBlocker : BaseBlocker() {
     private val hardBlockedSubstrings = listOf(
         "fs25", "fstream", "french-stream", "frenchstream",
         "melody", "melodie", "fluffing", "fluffington", "fufflyng",
-        "daisy", "marie", "daisymarie", "daisy-marie",
+        "daisy", "daisymar", "daisy-mar", "daisymarie", "daisy-marie",
         "bouncing", "bunny", "bouncingbunny", "bouncing-bunny"
     )
 
