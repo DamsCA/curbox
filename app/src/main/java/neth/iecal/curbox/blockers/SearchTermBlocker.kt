@@ -52,6 +52,16 @@ class SearchTermBlocker {
     )
 
     /**
+     * Applis interdites : ejectees des leur ouverture, sur n'importe quel ecran.
+     * Un jeu dessine son interface lui-meme, sans texte lisible : la lecture d'ecran
+     * ne le verrait pas, d'ou ce blocage par nom de paquet.
+     */
+    private val blockedPackages = setOf(
+        "com.riotgames.league.teamfighttactics",
+        "com.riotgames.league.teamfighttactics.pbe"
+    )
+
+    /**
      * Termes bannis, deja normalises : minuscules, sans espace ni ponctuation.
      * On vise le fragment le plus distinctif (le nom de famille suffit), pour qu'une
      * saisie partielle soit prise aussi, et on couvre les fautes de frappe courantes.
@@ -67,6 +77,8 @@ class SearchTermBlocker {
         "daisymar",
         "bouncing",
         "bunny",
+        // Jeu TFT banni le 2026-11-01 : fiche Play Store, recherche, sites d'APK.
+        "teamfighttactics", "teamfighttac",
         // formes completes (redondantes, gardees par securite)
         "melodyfluffington",
         "daisymarie",
@@ -90,6 +102,10 @@ class SearchTermBlocker {
         val svc = service ?: return
         val ev = event ?: return
         val pkg = ev.packageName?.toString() ?: return
+        if (pkg in blockedPackages) {
+            eject(svc, SystemClock.uptimeMillis())
+            return
+        }
         if (pkg in excludedPackages) return
 
         val now = SystemClock.uptimeMillis()

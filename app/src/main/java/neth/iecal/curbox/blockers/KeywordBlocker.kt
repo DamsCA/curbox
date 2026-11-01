@@ -70,7 +70,8 @@ class KeywordBlocker : BaseBlocker() {
         "fs25", "fstream", "french-stream", "frenchstream",
         "melody", "melodie", "fluffing", "fluffington", "fufflyng",
         "daisy", "daisymar", "daisy-mar", "daisymarie", "daisy-marie",
-        "bouncing", "bunny", "bouncingbunny", "bouncing-bunny"
+        "bouncing", "bunny", "bouncingbunny", "bouncing-bunny",
+        "teamfighttactics", "teamfight-tactics", "teamfight_tactics"
     )
 
     /**
