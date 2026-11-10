@@ -51,6 +51,10 @@ class ReducersFragment : Fragment() {
             startActivity(intent)
         }
 
+        view.findViewById<MaterialCardView>(R.id.card_key_vault).setOnClickListener {
+            startActivity(Intent(requireContext(), neth.iecal.curbox.ui.activity.KeyVaultActivity::class.java))
+        }
+
         autoDndCard.setOnClickListener {
             val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
                 putExtra("fragment", neth.iecal.curbox.ui.fragments.main.reducers.blockertools.autodnd.AutoDndFragment.FRAGMENT_ID)

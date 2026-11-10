@@ -52,6 +52,11 @@
             android:exported="false" />
 
         <activity
+            android:name=".ui.activity.KeyVaultActivity"
+            android:excludeFromRecents="true"
+            android:exported="false" />
+
+        <activity
             android:name=".ui.activity.CrashLogActivity"
             android:process=":crash_handler"
             android:exported="false"
