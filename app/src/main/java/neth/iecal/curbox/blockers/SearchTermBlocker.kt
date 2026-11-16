@@ -92,10 +92,16 @@ class SearchTermBlocker {
     private fun normalize(text: String): String =
         text.lowercase(Locale.ROOT).filter { it.isLetterOrDigit() }
 
+    /** Dernier terme trouve et son contexte, pour le journal des ejections. */
+    private var lastMatch = ""
+
     private fun containsBanned(text: String): Boolean {
         val n = normalize(text)
         if (n.length < 4) return false
-        return blockedTerms.any { n.contains(it) }
+        val term = blockedTerms.firstOrNull { n.contains(it) } ?: return false
+        val i = n.indexOf(term)
+        lastMatch = "term=$term ctx=" + n.substring(maxOf(0, i - 25), minOf(n.length, i + term.length + 25))
+        return true
     }
 
     fun check(event: AccessibilityEvent?) {
@@ -103,7 +109,7 @@ class SearchTermBlocker {
         val ev = event ?: return
         val pkg = ev.packageName?.toString() ?: return
         if (pkg in blockedPackages) {
-            eject(svc, SystemClock.uptimeMillis())
+            eject(svc, SystemClock.uptimeMillis(), "app bannie")
             return
         }
         if (pkg in excludedPackages) return
@@ -112,7 +118,7 @@ class SearchTermBlocker {
 
         // (3) L'app a ete rouverte pendant la fenetre de blocage : on ressort.
         if (now < blockedUntil) {
-            eject(svc, now)
+            eject(svc, now, "fenetre 3 s apres un terme banni")
             return
         }
 
@@ -160,7 +166,7 @@ class SearchTermBlocker {
     private fun trigger(svc: BaseBlockingService, now: Long) {
         blockedUntil = now + blockWindowMs
         clearSearchFields(svc)   // (4) sinon le terme revient a la prochaine ouverture
-        eject(svc, now)
+        eject(svc, now, lastMatch)
     }
 
     /** Vide les champs de saisie contenant un terme banni, pour ne pas le laisser en place. */
@@ -191,9 +197,10 @@ class SearchTermBlocker {
         }
     }
 
-    private fun eject(svc: BaseBlockingService, now: Long) {
+    private fun eject(svc: BaseBlockingService, now: Long, reason: String) {
         if (now - lastAction < 700) return
         lastAction = now
+        svc.ejectReason = "SearchTermBlocker: $reason"
         svc.pressBack()
         svc.pressHome()
     }

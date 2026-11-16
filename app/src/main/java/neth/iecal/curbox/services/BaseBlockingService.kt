@@ -79,13 +79,39 @@ open class BaseBlockingService : AccessibilityService() {
     }
 
     fun pressHome() {
+        logEjection("HOME")
         performGlobalAction(GLOBAL_ACTION_HOME)
         lastBackPressTimeStamp = SystemClock.uptimeMillis()
     }
 
     fun pressBack() {
+            logEjection("BACK")
             performGlobalAction(GLOBAL_ACTION_BACK)
             lastBackPressTimeStamp = SystemClock.uptimeMillis()
 
+    }
+
+    /** Raison detaillee fournie par le bloqueur juste avant d'ejecter (terme trouve, etc.). */
+    var ejectReason: String = ""
+
+    // Journal des ejections (files/eject_log.txt) : quel bloqueur a renvoye a l'accueil,
+    // depuis quelle app et pourquoi. Sert a diagnostiquer les fermetures inexpliquees.
+    private fun logEjection(action: String) {
+        runCatching {
+            val caller = Throwable().stackTrace.firstOrNull {
+                !it.className.endsWith("BaseBlockingService")
+            }
+            val pkg = runCatching { rootInActiveWindow?.packageName }.getOrNull()
+            val time = java.text.SimpleDateFormat("MM-dd HH:mm:ss", java.util.Locale.ROOT)
+                .format(java.util.Date())
+            val by = caller?.let { "${it.className.substringAfterLast('.')}.${it.methodName}:${it.lineNumber}" }
+            val line = "$time $action pkg=$pkg by=$by $ejectReason
+"
+            val f = java.io.File(filesDir, "eject_log.txt")
+            if (f.length() > 200_000) f.writeText("")
+            f.appendText(line)
+            android.util.Log.w("FocusEject", line.trim())
+        }
+        ejectReason = ""
     }
 }
