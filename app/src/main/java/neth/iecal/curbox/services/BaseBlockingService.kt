@@ -105,8 +105,7 @@ open class BaseBlockingService : AccessibilityService() {
             val time = java.text.SimpleDateFormat("MM-dd HH:mm:ss", java.util.Locale.ROOT)
                 .format(java.util.Date())
             val by = caller?.let { "${it.className.substringAfterLast('.')}.${it.methodName}:${it.lineNumber}" }
-            val line = "$time $action pkg=$pkg by=$by $ejectReason
-"
+            val line = "$time $action pkg=$pkg by=$by $ejectReason" + System.lineSeparator()
             val f = java.io.File(filesDir, "eject_log.txt")
             if (f.length() > 200_000) f.writeText("")
             f.appendText(line)
